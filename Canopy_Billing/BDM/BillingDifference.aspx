@@ -74,7 +74,7 @@
         <div class="container">
             <div class="row mb-2 callout callout-info">
                 <div class="col-sm-6">
-                    <h6 class="m-0"><i class="fas fa-copy"></i>&nbsp;&nbsp;<b>Auto vs Manual Billing Comparison Report</b></h6>
+                    <h6 class="m-0"><i class="fas fa-copy"></i>&nbsp;&nbsp;<b>Auto vs Manual Billing Comparison Report - Modified</b></h6>
                 </div>
             </div>
         </div>
