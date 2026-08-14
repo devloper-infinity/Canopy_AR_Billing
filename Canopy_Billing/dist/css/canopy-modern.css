@@ -1,0 +1,510 @@
+/* Canopy Billing modern UI layer */
+:root {
+    --canopy-bg: #f5f7fb;
+    --canopy-surface: #ffffff;
+    --canopy-surface-soft: #f8fafc;
+    --canopy-border: #d9e2ec;
+    --canopy-border-strong: #b8c7d8;
+    --canopy-text: #1f2a37;
+    --canopy-muted: #667085;
+    --canopy-primary: #123f6d;
+    --canopy-primary-dark: #0b2f53;
+    --canopy-primary-soft: #e8f1fb;
+    --canopy-accent: #0f766e;
+    --canopy-nav-start: #0b2f53;
+    --canopy-nav-end: #123f6d;
+    --canopy-nav-highlight: #2dd4bf;
+    --canopy-warning: #b45309;
+    --canopy-danger: #b42318;
+    --canopy-success: #15803d;
+    --canopy-shadow: 0 16px 45px rgba(15, 23, 42, 0.11);
+    --canopy-radius: 8px;
+}
+
+html,
+body {
+    min-height: 100%;
+}
+
+body {
+    color: var(--canopy-text);
+    background: var(--canopy-bg);
+    font-family: Bahnschrift, "Segoe UI", Roboto, Arial, sans-serif;
+    letter-spacing: 0;
+}
+
+.canopy-login-page {
+    min-height: 100vh;
+    margin: 0;
+    background: linear-gradient(120deg, rgba(15, 118, 110, 0.92), rgba(37, 99, 235, 0.72)), url("../../images/123.webp") center/cover no-repeat;
+}
+
+.login-shell {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: minmax(320px, 1fr) minmax(360px, 520px);
+}
+
+.login-brand-panel {
+    display: flex;
+    align-items: flex-end;
+    padding: 48px;
+    color: #fff;
+}
+
+.login-brand-copy {
+    max-width: 680px;
+}
+
+.login-brand-kicker {
+    margin: 0 0 14px;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.login-brand-title {
+    margin: 0;
+    font-size: 44px;
+    font-weight: 750;
+    line-height: 1.08;
+}
+
+.login-brand-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+    .login-brand-meta span {
+        border: 1px solid rgba(255, 255, 255, 0.32);
+        border-radius: 999px;
+        padding: 8px 13px;
+        background: rgba(255, 255, 255, 0.12);
+        font-size: 13px;
+    }
+
+.login-card-panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    /*background: rgba(255, 255, 255, 0.88);*/
+    backdrop-filter: blur(14px);
+}
+
+.login-card {
+    width: 100%;
+    max-width: 430px;
+    border: 1px solid rgba(184, 199, 216, 0.72);
+    border-radius: var(--canopy-radius);
+    padding: 34px;
+    background: var(--canopy-surface);
+    box-shadow: var(--canopy-shadow);
+}
+
+.login-logo-img {
+    max-width: 190px;
+    max-height: 70px;
+    object-fit: contain;
+    margin-bottom: 24px;
+}
+
+.login-card h1 {
+    margin: 0 0 8px;
+    color: var(--canopy-text);
+    font-size: 28px;
+    font-weight: 750;
+}
+
+.login-card p {
+    color: var(--canopy-muted);
+}
+
+.login-field {
+    margin-bottom: 16px;
+}
+
+    .login-field label {
+        display: block;
+        margin-bottom: 7px;
+        color: var(--canopy-text);
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+.login-input-group {
+    position: relative;
+}
+
+    .login-input-group .form-control {
+        height: 46px;
+        padding-left: 43px;
+    }
+
+    .login-input-group .field-icon {
+        position: absolute;
+        top: 50%;
+        left: 14px;
+        transform: translateY(-50%);
+        color: var(--canopy-muted);
+        z-index: 2;
+    }
+
+.login-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 20px;
+}
+
+    .login-actions .btn {
+        min-width: 138px;
+    }
+
+.remember-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--canopy-muted);
+    font-size: 13px;
+}
+
+.mfa-setup-panel {
+    border: 1px solid var(--canopy-border);
+    border-radius: var(--canopy-radius);
+    padding: 16px;
+    margin: 18px 0;
+    background: var(--canopy-surface-soft);
+}
+
+.mfa-manual-key {
+    display: block;
+    width: 100%;
+    margin: 10px 0 12px;
+    border: 1px dashed var(--canopy-border-strong);
+    border-radius: var(--canopy-radius);
+    padding: 12px;
+    color: var(--canopy-primary-dark);
+    background: #fff;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.6;
+    word-break: break-word;
+}
+
+.mfa-note {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* Professional ERP navigation */
+.main-header.canopy-nav,
+.canopy-nav,
+.navbar.canopy-nav,
+.main-header .navbar {
+    border: 0 !important;
+    background: linear-gradient(135deg, var(--canopy-nav-start) 0%, var(--canopy-nav-end) 58%, #0f766e 100%) !important;
+    box-shadow: 0 10px 28px rgba(11, 47, 83, 0.22);
+}
+
+    .canopy-nav:after,
+    .main-header.canopy-nav:after {
+        content: "";
+        display: block;
+        height: 3px;
+        background: linear-gradient(90deg, var(--canopy-nav-highlight), rgba(45, 212, 191, 0), #60a5fa);
+    }
+
+    .canopy-nav .container,
+    .canopy-nav .container-fluid {
+        max-width: 1480px;
+    }
+
+    .canopy-nav .navbar-brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 64px;
+        color: #fff !important;
+        font-weight: 800;
+        letter-spacing: .01em;
+    }
+
+        .canopy-nav .navbar-brand img {
+            max-height: 54px;
+            object-fit: contain;
+            /*background: rgba(255,255,255,.96);*/
+            border-radius: 10px;
+            padding: 5px 9px;
+            box-shadow: 0 8px 20px rgba(0,0,0,.12);
+        }
+
+    .canopy-nav .nav-link,
+    .main-header .navbar-nav .nav-link {
+        border-radius: 9px;
+        color: rgba(255, 255, 255, 0.88) !important;
+        font-size: 14px;
+        font-weight: 700;
+        margin: 0 2px;
+        padding: 9px 12px !important;
+        transition: background .16s ease, color .16s ease, box-shadow .16s ease;
+    }
+
+        .canopy-nav .nav-link:hover,
+        .canopy-nav .nav-link:focus,
+        .canopy-nav .nav-item.show > .nav-link,
+        .main-header .navbar-nav .nav-link:hover,
+        .main-header .navbar-nav .nav-link:focus {
+            color: #fff !important;
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,.12);
+        }
+
+        .canopy-nav .nav-link.active,
+        .main-header .navbar-nav .nav-link.active {
+            color: #fff !important;
+            background: rgba(45, 212, 191, 0.22);
+            box-shadow: inset 0 -2px 0 var(--canopy-nav-highlight);
+        }
+
+    .canopy-nav .navbar-toggler {
+        border-color: rgba(255, 255, 255, 0.32);
+        background: rgba(255, 255, 255, 0.12);
+    }
+
+    .canopy-nav .dropdown-menu,
+    .main-header .dropdown-menu {
+        overflow: hidden;
+        border: 1px solid rgba(184, 199, 216, .75);
+        border-radius: 10px;
+        box-shadow: 0 18px 45px rgba(11, 47, 83, 0.18);
+    }
+
+    .canopy-nav .dropdown-item,
+    .main-header .dropdown-item {
+        color: var(--canopy-text);
+        font-size: 12px;
+        padding: 5px 16px;
+    }
+
+        .canopy-nav .dropdown-item:hover,
+        .canopy-nav .dropdown-item:focus,
+        .main-header .dropdown-item:hover,
+        .main-header .dropdown-item:focus {
+            color: var(--canopy-primary-dark);
+            background: var(--canopy-primary-soft);
+        }
+
+.canopy-content-wrapper {
+    min-height: calc(100vh - 65px) !important;
+    background: linear-gradient(180deg, rgba(18, 63, 109, 0.08), rgba(15, 118, 110, 0.02)), var(--canopy-bg);
+}
+
+.app-content,
+.content .container,
+.content .container-fluid {
+    max-width: 1480px;
+}
+
+.content {
+    padding: 22px 0 36px;
+}
+
+.content-header {
+    padding: 18px 0 8px;
+}
+
+    .content-header .callout,
+    .callout.callout-info {
+        border-left: 4px solid var(--canopy-primary);
+        border-radius: var(--canopy-radius);
+        background: var(--canopy-surface);
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    }
+
+.card {
+    border: 1px solid var(--canopy-border);
+    border-radius: var(--canopy-radius);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.07);
+}
+
+    .card.card-tabs {
+        box-shadow: none;
+    }
+
+.card-header {
+    border-bottom: 1px solid var(--canopy-border);
+    background: var(--canopy-surface);
+}
+
+.card-body {
+    padding: 22px;
+}
+
+.btn {
+    border-radius: 6px;
+    font-weight: 700;
+}
+
+.btn-primary {
+    border-color: var(--canopy-primary);
+    background: var(--canopy-primary);
+}
+
+    .btn-primary:hover,
+    .btn-primary:focus {
+        border-color: var(--canopy-primary-dark);
+        background: var(--canopy-primary-dark);
+    }
+
+.btn-default,
+.btn-secondary {
+    border-color: var(--canopy-border-strong);
+    color: var(--canopy-text);
+    background: #fff;
+}
+
+.form-control,
+.custom-select,
+select,
+textarea {
+    border-color: var(--canopy-border-strong);
+    border-radius: 6px;
+    color: var(--canopy-text);
+}
+
+    .form-control:focus,
+    .custom-select:focus,
+    select:focus,
+    textarea:focus {
+        border-color: var(--canopy-primary);
+        box-shadow: 0 0 0 0.2rem rgba(15, 118, 110, 0.14);
+    }
+
+.table {
+    color: var(--canopy-text);
+}
+
+    .table th,
+    .table td {
+        vertical-align: middle !important;
+    }
+
+.table-bordered,
+.table-bordered td,
+.table-bordered th {
+    border-color: var(--canopy-border);
+}
+
+table.dataTable thead th,
+.table thead th {
+    border-bottom: 1px solid var(--canopy-border-strong) !important;
+    color: #334155;
+    background: #f1f5f9;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+.dataTables_wrapper .dataTables_filter input,
+.dataTables_wrapper .dataTables_length select {
+    border: 1px solid var(--canopy-border-strong);
+    border-radius: 6px;
+    padding: 5px 9px;
+}
+
+.page-item.active .page-link {
+    border-color: var(--canopy-primary);
+    background: var(--canopy-primary);
+}
+
+.modal-content {
+    border: 1px solid var(--canopy-border);
+    border-radius: var(--canopy-radius);
+    box-shadow: var(--canopy-shadow);
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--canopy-border);
+}
+
+.modal-footer {
+    border-top: 1px solid var(--canopy-border);
+}
+
+.alert {
+    border-radius: var(--canopy-radius);
+}
+
+.alert-danger,
+.background-danger {
+    border-color: rgba(180, 35, 24, 0.2);
+    color: var(--canopy-danger);
+    background: #fef3f2 !important;
+}
+
+.loading {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    background: rgba(15, 23, 42, 0.28);
+}
+
+    .loading img,
+    .loading:before {
+        max-width: 64px;
+    }
+
+@media (max-width: 992px) {
+    .login-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .login-brand-panel {
+        min-height: 34vh;
+        padding: 32px;
+    }
+
+    .login-card-panel {
+        align-items: flex-start;
+    }
+
+    .login-brand-title {
+        font-size: 34px;
+    }
+
+    .canopy-nav .navbar-collapse {
+        padding: 12px 0;
+    }
+}
+
+@media (max-width: 576px) {
+    .login-brand-panel,
+    .login-card-panel {
+        padding: 22px;
+    }
+
+    .login-card {
+        padding: 24px;
+    }
+
+    .login-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+        .login-actions .btn {
+            width: 100%;
+        }
+
+    .card-body {
+        padding: 16px;
+    }
+}

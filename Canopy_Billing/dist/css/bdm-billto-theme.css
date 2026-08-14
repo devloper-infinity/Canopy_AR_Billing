@@ -1,0 +1,778 @@
+:root {
+    --erp-navy: #0f2744;
+    --erp-navy-soft: #173a5e;
+    --erp-teal: #1f6f73;
+    --erp-mint: #d9f1ed;
+    --erp-gold: #d89f2b;
+    --erp-bg: #f4f7fb;
+    --erp-surface: #ffffff;
+    --erp-border: #d8e1ea;
+    --erp-border-soft: #e7edf3;
+    --erp-text: #26384c;
+    --erp-muted: #718096;
+    --erp-danger: #d64545;
+    --erp-shadow: 0 18px 40px rgba(15, 39, 68, 0.12);
+}
+
+body {
+    background: var(--erp-bg);
+}
+
+.bdm-page,
+.billto-page {
+    padding: 14px 4px 34px;
+    color: var(--erp-text);
+    font-family: Bahnschrift;/*"Inter", "Segoe UI", sans-serif;*/
+}
+
+.page-header,
+.bdm-page .content-header .callout.callout-info {
+    background: linear-gradient(135deg, var(--erp-navy), var(--erp-teal));
+    border: 0 !important;
+    border-radius: 12px;
+    box-shadow: var(--erp-shadow);
+    color: #ffffff;
+    margin: 0 0 18px !important;
+    overflow: hidden;
+    padding: 0 !important;
+    position: relative;
+}
+
+.page-header::after,
+.bdm-page .content-header .callout.callout-info::after {
+    background:
+        radial-gradient(circle at center, rgba(255, 255, 255, 0.18), transparent 68%),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.16), transparent);
+    content: "";
+    height: 180px;
+    pointer-events: none;
+    position: absolute;
+    right: -58px;
+    top: -72px;
+    width: 180px;
+}
+
+.header-content {
+    align-items: center;
+    display: flex;
+    gap: 20px;
+    justify-content: space-between;
+    padding: 24px 28px;
+    position: relative;
+    z-index: 1;
+}
+
+.header-left {
+    align-items: center;
+    display: flex;
+    gap: 16px;
+    min-width: 0;
+}
+
+.header-icon {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 10px;
+    display: inline-flex;
+    flex: 0 0 auto;
+    height: 52px;
+    justify-content: center;
+    width: 52px;
+}
+
+.header-icon i {
+    color: #ffffff;
+    font-size: 24px;
+}
+
+.page-header h1,
+.bdm-page .content-header h6 {
+    color: #ffffff !important;
+    font-size: 24px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0;
+    line-height: 1.22;
+    margin: 0;
+}
+
+.page-header p {
+    color: rgba(255, 255, 255, 0.76);
+    font-size: 14px;
+    margin: 5px 0 0;
+}
+
+.module-badge {
+    align-items: center;
+    background: rgba(216, 159, 43, 0.18);
+    border: 1px solid rgba(255, 220, 149, 0.38);
+    border-radius: 999px;
+    color: #fff3d4;
+    display: inline-flex;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 9px 14px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.bdm-page .client-master-page,
+.bdm-page .billing-page,
+.bdm-page .billing-shell,
+.bdm-page .erp-page,
+.bdm-page .erp-container,
+.bdm-page .erp-page-shell,
+.bdm-page .project-details-modern,
+.bdm-page .project-master-modern,
+.bdm-page .erp-dashboard-page,
+.bdm-page > .container-fluid {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    max-width: none !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    width: 100% !important;
+}
+
+.bdm-page .erp-page-hero,
+.bdm-page .billing-hero,
+.bdm-page .dashboard-header,
+.bdm-page .erp-page > .erp-hero {
+    align-items: center !important;
+    background: linear-gradient(135deg, var(--erp-navy), var(--erp-teal)) !important;
+    border: 0 !important;
+    border-radius: 12px !important;
+    box-shadow: var(--erp-shadow) !important;
+    color: #ffffff !important;
+    display: flex;
+    gap: 20px;
+    justify-content: space-between;
+    margin: 0 0 18px !important;
+    min-height: 98px;
+    overflow: hidden;
+    padding: 24px 28px !important;
+    position: relative;
+}
+
+.bdm-page .erp-page-hero::after,
+.bdm-page .billing-hero::after,
+.bdm-page .dashboard-header::after,
+.bdm-page .erp-page > .erp-hero::after {
+    background:
+        radial-gradient(circle at center, rgba(255, 255, 255, 0.18), transparent 68%),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.16), transparent);
+    content: "";
+    height: 180px;
+    pointer-events: none;
+    position: absolute;
+    right: -58px;
+    top: -72px;
+    width: 180px;
+}
+
+.bdm-page .erp-page-hero > *,
+.bdm-page .billing-hero > *,
+.bdm-page .dashboard-header > *,
+.bdm-page .erp-page > .erp-hero > * {
+    position: relative;
+    z-index: 1;
+}
+
+.bdm-page .erp-hero-content,
+.bdm-page .billing-hero-left,
+.bdm-page .billing-title-row,
+.bdm-page .erp-page > .erp-hero > div:first-child {
+    align-items: center;
+    display: flex;
+    gap: 14px;
+}
+
+.bdm-page .erp-hero-content > div,
+.bdm-page .billing-hero-left,
+.bdm-page .erp-page > .erp-hero > div:first-child {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.bdm-page .erp-hero-icon,
+.bdm-page .billing-title-row i,
+.bdm-page .erp-page > .erp-hero h3 i,
+.bdm-page .erp-page > .erp-hero h4 i {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.15) !important;
+    border: 1px solid rgba(255, 255, 255, 0.22) !important;
+    border-radius: 10px;
+    color: #ffffff !important;
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 20px;
+    height: 48px;
+    justify-content: center;
+    width: 48px;
+}
+
+.bdm-page .erp-page-title,
+.bdm-page .billing-hero h1,
+.bdm-page .dashboard-header h2,
+.bdm-page .erp-page > .erp-hero h3,
+.bdm-page .erp-page > .erp-hero h4 {
+    color: #ffffff !important;
+    font-size: 24px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0;
+    line-height: 1.22;
+    margin: 0 !important;
+}
+
+.bdm-page .erp-page-subtitle,
+.bdm-page .billing-hero p,
+.bdm-page .dashboard-header p,
+.bdm-page .erp-page > .erp-hero p {
+    color: rgba(255, 255, 255, 0.76) !important;
+    font-size: 14px !important;
+    margin: 5px 0 0 !important;
+}
+
+.bdm-page .erp-eyebrow {
+    color: #fff3d4 !important;
+    font-size: 12px !important;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    margin: 0 !important;
+    text-transform: uppercase;
+}
+
+.bdm-page .erp-hero-badge,
+.bdm-page .billing-chip,
+.bdm-page .erp-icon-btn {
+    align-items: center;
+    background: rgba(216, 159, 43, 0.18) !important;
+    border: 1px solid rgba(255, 220, 149, 0.38) !important;
+    border-radius: 999px !important;
+    color: #fff3d4 !important;
+    display: inline-flex;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    gap: 8px;
+    min-height: 38px;
+    padding: 9px 14px !important;
+    text-decoration: none !important;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.bdm-page .erp-icon-btn:hover {
+    color: #ffffff !important;
+    transform: translateY(-1px);
+}
+
+.bdm-page .content-header {
+    margin: 0 0 18px;
+    padding: 0;
+}
+
+.bdm-page .content-header .container,
+.bdm-page .content-header .container-fluid {
+    max-width: none;
+    padding: 0;
+    width: 100%;
+}
+
+.bdm-page .content-header .callout.callout-info {
+    min-height: 98px;
+    padding: 24px 28px !important;
+}
+
+.bdm-page .content-header .callout.callout-info .row {
+    align-items: center;
+    margin-left: 0;
+    margin-right: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.bdm-page .content-header .callout.callout-info [class*="col-"] {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.bdm-page .content-header .callout.callout-info h6 {
+    align-items: center;
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 9px;
+}
+
+.bdm-page .content-header .callout.callout-info h6 i {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 10px;
+    display: inline-flex;
+    font-size: 18px;
+    height: 42px;
+    justify-content: center;
+    width: 42px;
+}
+
+.bdm-page .content-header .breadcrumb {
+    background: transparent;
+    justify-content: flex-end;
+    margin: 0;
+    padding: 0;
+}
+
+.bdm-page .content-header .breadcrumb a,
+.bdm-page .content-header .breadcrumb-item,
+.bdm-page .content-header .breadcrumb-item a {
+    color: rgba(255, 255, 255, 0.86) !important;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.erp-panel,
+.bdm-page .card,
+.bdm-page .modal-content,
+.bdm-page .billing-card,
+.bdm-page .billing-section,
+.bdm-page .card-modern {
+    background: var(--erp-surface) !important;
+    border: 1px solid var(--erp-border-soft) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 12px 28px rgba(15, 39, 68, 0.08) !important;
+    margin-bottom: 18px;
+    overflow: hidden;
+}
+
+.erp-panel__header,
+.erp-panel-header,
+.bdm-page .billing-toolbar,
+.bdm-page .card-header,
+.bdm-page .modal-header {
+    align-items: center;
+    background: linear-gradient(180deg, #fbfcfe, #f2f6fa) !important;
+    border-bottom: 1px solid var(--erp-border-soft) !important;
+    display: flex;
+    gap: 14px;
+    justify-content: space-between;
+    padding: 17px 20px !important;
+}
+
+.erp-panel__title,
+.erp-panel-title,
+.bdm-page .billing-section-title h2,
+.bdm-page .card-title,
+.bdm-page .modal-title {
+    color: var(--erp-navy);
+    font-size: 17px;
+    font-weight: 700;
+    margin: 0;
+}
+
+.erp-panel__hint,
+.erp-panel-subtitle,
+.erp-panel-note,
+.bdm-page .billing-section-title p {
+    color: var(--erp-muted);
+    font-size: 13px;
+    margin: 4px 0 0;
+}
+
+.erp-panel__body,
+.erp-panel-body,
+.bdm-page .billing-section,
+.bdm-page .card-body,
+.bdm-page .modal-body {
+    padding: 20px !important;
+}
+
+.bdm-page .col-lg-12,
+.bdm-page .col-md-12,
+.bdm-page .col-sm-12,
+.bdm-page .col-xs-12 {
+    max-width: 100%;
+}
+
+.erp-form-grid {
+    display: grid;
+    gap: 16px 18px;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+.erp-field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.erp-field label,
+.bdm-page .billing-field label,
+.bdm-page label,
+.bdm-page .form-label {
+    border: 0 !important;
+    color: var(--erp-text);
+    font-size: 13px;
+    font-weight: 700 !important;
+    margin-bottom: 6px;
+}
+
+.erp-input,
+.bdm-page .billing-field input,
+.bdm-page .billing-field select,
+.bdm-page .form-control,
+.bdm-page .custom-select,
+.bdm-page select,
+.bdm-page input[type="text"],
+.bdm-page input[type="number"],
+.bdm-page input[type="date"],
+.bdm-page input[type="email"],
+.bdm-page input[type="password"],
+.bdm-page textarea {
+    background-color: #ffffff !important;
+    border: 1px solid var(--erp-border) !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    color: var(--erp-text) !important;
+    font-size: 12px !important;
+   /* min-height: 40px;*/
+    padding: 9px 12px !important;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.erp-input:focus,
+.bdm-page .billing-field input:focus,
+.bdm-page .billing-field select:focus,
+.bdm-page .form-control:focus,
+.bdm-page .custom-select:focus,
+.bdm-page select:focus,
+.bdm-page input:focus,
+.bdm-page textarea:focus {
+    border-color: var(--erp-teal) !important;
+    box-shadow: 0 0 0 3px rgba(31, 111, 115, 0.14) !important;
+    outline: 0;
+}
+
+.bdm-page textarea.form-control,
+.bdm-page textarea {
+    min-height: 86px;
+}
+
+.erp-actions,
+.bdm-page .action-row {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.erp-btn,
+.bdm-page .billing-btn,
+.bdm-page .btn,
+.bdm-page button,
+.bdm-page input[type="button"],
+.bdm-page input[type="submit"] {
+    align-items: center;
+    border-radius: 8px !important;
+    display: inline-flex;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    gap: 8px;
+    justify-content: center;
+    min-height: 40px;
+    padding: 9px 16px !important;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+
+.erp-btn:hover,
+.bdm-page .billing-btn:hover,
+.bdm-page .btn:hover,
+.bdm-page button:hover,
+.bdm-page input[type="button"]:hover,
+.bdm-page input[type="submit"]:hover {
+    transform: translateY(-1px);
+}
+
+.erp-btn--primary,
+.bdm-page .billing-btn-primary,
+.bdm-page .billing-btn-success,
+.bdm-page .btn-primary,
+.bdm-page .btn-info,
+.bdm-page .btn-success,
+.bdm-page .buttons-excel {
+    background: linear-gradient(135deg, var(--erp-teal), #248d89) !important;
+    border: 1px solid rgba(31, 111, 115, 0.3) !important;
+    box-shadow: 0 10px 18px rgba(31, 111, 115, 0.18) !important;
+    color: #ffffff !important;
+}
+
+.erp-btn--secondary,
+.bdm-page .billing-btn-danger,
+.bdm-page .btn-secondary,
+.bdm-page .btn-default,
+.bdm-page .buttons-copy,
+.bdm-page .buttons-csv,
+.bdm-page .buttons-print {
+    background: #eef4f8 !important;
+    border: 1px solid var(--erp-border) !important;
+    color: var(--erp-navy) !important;
+}
+
+.bdm-page .btn-danger {
+    background: linear-gradient(135deg, #cf4646, var(--erp-danger)) !important;
+    border-color: rgba(214, 69, 69, 0.35) !important;
+    color: #ffffff !important;
+}
+
+.bdm-page a {
+    color: var(--erp-teal);
+}
+
+.erp-table-wrap,
+.bdm-page .dataTables_wrapper,
+.bdm-page .table-responsive {
+    width: 100%;
+}
+
+.bdm-page .dataTables_wrapper {
+    overflow-x: auto;
+}
+
+.bdm-page table.table,
+.bdm-page table.dataTable,
+.bdm-page .dataTable,
+.bdm-page table[id$="_table"],
+.bdm-page table[id*="_table"] {
+    border: 1px solid var(--erp-border-soft) !important;
+    border-collapse: separate !important;
+    border-radius: 8px;
+    border-spacing: 0;
+    overflow: hidden;
+    width: 100% !important;
+}
+
+.bdm-page table.table thead th,
+.bdm-page table.dataTable thead th,
+.bdm-page .dataTable thead th,
+.bdm-page table[id$="_table"] thead th,
+.bdm-page table[id*="_table"] thead th {
+    background: #eef4f8 !important;
+    border-bottom: 1px solid var(--erp-border) !important;
+    color: var(--erp-navy) !important;
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.02em;
+    padding: 12px 14px !important;
+    text-transform: uppercase;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.bdm-page table.table tbody td,
+.bdm-page table.dataTable tbody td,
+.bdm-page .dataTable tbody td,
+.bdm-page table[id$="_table"] tbody td,
+.bdm-page table[id*="_table"] tbody td {
+    border-top: 1px solid var(--erp-border-soft) !important;
+    color: var(--erp-text);
+    font-size: 12px;
+    padding: 7px 14px !important;
+    vertical-align: middle;
+}
+
+.bdm-page table.table tbody tr:hover,
+.bdm-page table.dataTable tbody tr:hover,
+.bdm-page .dataTable tbody tr:hover {
+    background: #f7fbfd !important;
+}
+
+.bdm-page .dataTables_filter,
+.bdm-page .dataTables_length,
+.bdm-page .dataTables_info,
+.bdm-page .dataTables_paginate {
+    color: var(--erp-muted) !important;
+    font-size: 13px;
+    margin: 8px 0;
+}
+
+.bdm-page .dataTables_filter input,
+.bdm-page .dataTables_length select {
+    margin-left: 7px;
+}
+
+.bdm-page .paginate_button {
+    border-radius: 7px !important;
+    color: var(--erp-text) !important;
+    margin: 0 2px !important;
+}
+
+.bdm-page .paginate_button.current,
+.bdm-page .paginate_button.current:hover {
+    background: var(--erp-teal) !important;
+    border-color: var(--erp-teal) !important;
+    color: #ffffff !important;
+}
+
+.bdm-page .dt-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 12px;
+}
+
+.bdm-page .template-links {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.bdm-page .template-links a {
+    align-items: center;
+    background: #eef4f8 !important;
+    border: 1px solid var(--erp-border) !important;
+    border-radius: 999px !important;
+    color: var(--erp-navy) !important;
+    display: inline-flex;
+    font-size: 12px;
+    font-weight: 800;
+    gap: 7px;
+    padding: 8px 12px !important;
+    text-decoration: none !important;
+}
+
+.bdm-page .kpi-card {
+    background: #ffffff !important;
+    border: 1px solid var(--erp-border-soft) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 10px 22px rgba(15, 39, 68, 0.08) !important;
+    min-height: 104px;
+    padding: 18px !important;
+}
+
+.bdm-page .kpi-title {
+    color: var(--erp-muted) !important;
+    font-size: 12px !important;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.bdm-page .kpi-value {
+    color: var(--erp-navy) !important;
+    font-size: 28px !important;
+    font-weight: 800;
+    margin-top: 8px;
+}
+
+.bdm-page hr {
+    border-top: 1px solid var(--erp-border-soft);
+}
+
+.bdm-page .alert,
+.bdm-page .callout:not(.callout-info) {
+    border-radius: 8px;
+}
+
+.bdm-page .modal-backdrop {
+    opacity: 0.45 !important;
+}
+
+.loading {
+    display: none;
+    position: fixed;
+    inset: 0;
+    width: auto;
+    height: auto;
+    margin: 0;
+    z-index: 99999;
+    background: rgba(15, 23, 42, .28);
+    opacity: 1;
+    border-radius: 0;
+    text-align: center;
+}
+
+.loading__box {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 180px;
+    padding: 22px 18px;
+    transform: translate(-50%, -50%);
+    border: 1px solid rgba(255, 255, 255, .7);
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 20px 48px rgba(15, 23, 42, .18);
+}
+
+    .loading__box img {
+        max-width: 54px;
+        height: auto;
+    }
+
+.loading__text {
+    margin-top: 10px;
+    color: #374151;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+@media (max-width: 768px) {
+    .bdm-page,
+    .billto-page {
+        padding: 10px 0 26px;
+    }
+
+    .header-content {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 20px;
+    }
+
+    .page-header h1,
+    .bdm-page .content-header h6,
+    .bdm-page .erp-page-title,
+    .bdm-page .billing-hero h1,
+    .bdm-page .dashboard-header h2,
+    .bdm-page .erp-page > .erp-hero h3,
+    .bdm-page .erp-page > .erp-hero h4 {
+        font-size: 20px !important;
+    }
+
+    .bdm-page .erp-page-hero,
+    .bdm-page .billing-hero,
+    .bdm-page .dashboard-header,
+    .bdm-page .erp-page > .erp-hero {
+        align-items: flex-start !important;
+        flex-direction: column;
+        padding: 20px !important;
+    }
+
+    .bdm-page .erp-hero-content,
+    .bdm-page .billing-title-row,
+    .bdm-page .erp-page > .erp-hero > div:first-child {
+        align-items: flex-start;
+    }
+
+    .bdm-page .content-header .callout.callout-info {
+        padding: 20px !important;
+    }
+
+    .bdm-page .content-header .breadcrumb {
+        justify-content: flex-start;
+        margin-top: 12px;
+    }
+
+    .erp-panel__body,
+    .erp-panel-body,
+    .bdm-page .card-body,
+    .bdm-page .modal-body {
+        padding: 16px !important;
+    }
+
+    .erp-form-grid {
+        grid-template-columns: 1fr;
+    }
+}
