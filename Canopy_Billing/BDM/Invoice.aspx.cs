@@ -8,6 +8,7 @@ using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Net.Mail;
+using System.Globalization;
 using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.Services;
@@ -62,7 +63,14 @@ namespace Vendor_Portal.BDM
             {
                 string query = @"SELECT 
                        InvoiceID, OurClient, Recipient, TradeName, InvoiceDate, Document, TM, DocuSign,
-                        DocumentDate, ExecutedDate, LoanCount, Cost, ExpectedBilling,
+                        DocumentDate, ExecutedDate, LoanCount,
+                        CASE
+                            WHEN ISNULL(Cost, 0) = 0
+                                 AND TRY_CONVERT(decimal(18,4), LoanCount) <> 0
+                            THEN Floor(ExpectedBilling / TRY_CONVERT(decimal(18,4), LoanCount))
+                            ELSE Cost
+                        END AS Cost,
+                        ExpectedBilling,
                         BillingEntity, ContactPerson, SubmittedForInvoice, InvoiceIssued, Notes,FilePath, isVerify, VerifyRemark, VerifiedOn
                         FROM RLinvoice";
 
@@ -79,7 +87,7 @@ namespace Vendor_Portal.BDM
                             OurClient = dr["OurClient"].ToString(),
                             Recipient = dr["Recipient"].ToString(),
                             TradeName = dr["TradeName"].ToString(),
-                            InvoiceDate = Convert.ToDateTime(dr["InvoiceDate"]).ToString("MM.dd.yyyy"),
+                            InvoiceDate = FormatInvoiceDate(dr["InvoiceDate"]),
                             Document = dr["Document"].ToString(),
                             TM = dr["TM"].ToString(),
                             DocSign = dr["DocuSign"].ToString(),
@@ -286,10 +294,7 @@ namespace Vendor_Portal.BDM
                             {
                                 OurClient = dr["OurClient"].ToString(),
                                 TradeName = dr["TradeName"].ToString(),
-                                InvoiceDate = dr["InvoiceDate"] == DBNull.Value
-                                    ? ""
-                                    : Convert.ToDateTime(dr["InvoiceDate"]).ToString("MM.dd.yyyy")
-                                    ,
+                                InvoiceDate = FormatInvoiceDate(dr["InvoiceDate"]),
                                 BillingEntity = dr["BillingEntity"].ToString(),
                             });
                         }
@@ -303,7 +308,7 @@ namespace Vendor_Portal.BDM
                             {
                                 OurClient = dr["OurClient"].ToString(),
                                 TradeName = dr["TradeName"].ToString(),
-                                InvoiceDate = Convert.ToDateTime(dr["InvoiceDate"]).ToString("MM.dd.yyyy"),
+                                InvoiceDate = FormatInvoiceDate(dr["InvoiceDate"]),
                                 BillingEntity = dr["BillingEntity"].ToString(),
                             });
                         }
@@ -317,9 +322,7 @@ namespace Vendor_Portal.BDM
                             {
                                 OurClient = dr["OurClient"].ToString(),
                                 TradeName = dr["TradeName"].ToString(),
-                                InvoiceDate = dr["InvoiceDate"] == DBNull.Value
-                                    ? ""
-                                    : Convert.ToDateTime(dr["InvoiceDate"]).ToString("MM.dd.yyyy"),
+                                InvoiceDate = FormatInvoiceDate(dr["InvoiceDate"]),
                                 BillingEntity = dr["BillingEntity"].ToString(),
                                 TM = dr["TM"].ToString(),
                                 ErrorMessage = dr["ErrorMessage"].ToString()
@@ -374,12 +377,12 @@ namespace Vendor_Portal.BDM
                         cmd.Parameters.AddWithValue("@OurClient", obj.OurClient);
                         cmd.Parameters.AddWithValue("@Recipient", obj.Recipient);
                         cmd.Parameters.AddWithValue("@TradeName", obj.TradeName);
-                        cmd.Parameters.AddWithValue("@InvoiceDate", obj.InvoiceDate);
+                        cmd.Parameters.AddWithValue("@InvoiceDate", ParseOptionalInvoiceDate(obj.InvoiceDate));
                         cmd.Parameters.AddWithValue("@Document", obj.Document);
                         cmd.Parameters.AddWithValue("@TM", obj.TM);
                         cmd.Parameters.AddWithValue("@DocSign", obj.DocSign);
-                        cmd.Parameters.AddWithValue("@DocumentDate", string.IsNullOrEmpty(obj.DocumentDate) ? (object)DBNull.Value : Convert.ToDateTime(obj.DocumentDate));
-                        cmd.Parameters.AddWithValue("@ExecutedDate", string.IsNullOrEmpty(obj.ExecutedDate) ? (object)DBNull.Value : Convert.ToDateTime(obj.ExecutedDate));
+                        cmd.Parameters.AddWithValue("@DocumentDate", ParseOptionalInvoiceDate(obj.DocumentDate));
+                        cmd.Parameters.AddWithValue("@ExecutedDate", ParseOptionalInvoiceDate(obj.ExecutedDate));
                         cmd.Parameters.AddWithValue("@LoanCount", obj.LoanCount);
                         cmd.Parameters.AddWithValue("@Cost", obj.Cost);
                         cmd.Parameters.AddWithValue("@ExpectedBilling", obj.ExpectedBilling);
@@ -685,17 +688,17 @@ namespace Vendor_Portal.BDM
                 cmd.Parameters.AddWithValue("@OurClient", model.OurClient ?? "");
                 cmd.Parameters.AddWithValue("@Recipient", model.Recipient ?? "");
                 cmd.Parameters.AddWithValue("@TradeName", model.TradeName ?? "");
-                cmd.Parameters.AddWithValue("@InvoiceDate", Convert.ToDateTime(model.InvoiceDate).ToString("MM.dd.yyyy"));
+                cmd.Parameters.AddWithValue("@InvoiceDate", FormatOptionalInvoiceDate(model.InvoiceDate));
 
                 cmd.Parameters.AddWithValue("@Document", model.Document ?? "");
                 cmd.Parameters.AddWithValue("@TM", model.TM ?? "");
                 cmd.Parameters.AddWithValue("@DocuSign", model.DocSign ?? "");
 
                 cmd.Parameters.AddWithValue("@DocumentDate",
-                    string.IsNullOrEmpty(model.DocumentDate) ? (object)DBNull.Value : Convert.ToDateTime(model.DocumentDate).ToString("MM.dd.yyyy"));
+                    FormatOptionalInvoiceDate(model.DocumentDate));
 
                 cmd.Parameters.AddWithValue("@ExecutedDate",
-                    string.IsNullOrEmpty(model.ExecutedDate) ? (object)DBNull.Value : Convert.ToDateTime(model.ExecutedDate).ToString("MM.dd.yyyy"));
+                    FormatOptionalInvoiceDate(model.ExecutedDate));
 
                 cmd.Parameters.AddWithValue("@BillingEntity", model.BillingEntity);
                 cmd.Parameters.AddWithValue("@ContactPerson", SerializeEmailConfiguration(model.EmailConfiguration));
@@ -793,17 +796,17 @@ namespace Vendor_Portal.BDM
                 cmd.Parameters.AddWithValue("@OurClient", model.OurClient ?? "");
                 cmd.Parameters.AddWithValue("@Recipient", model.Recipient ?? "");
                 cmd.Parameters.AddWithValue("@TradeName", model.TradeName ?? "");
-                cmd.Parameters.AddWithValue("@InvoiceDate", Convert.ToDateTime(model.InvoiceDate).ToString("MM.dd.yyyy"));
+                cmd.Parameters.AddWithValue("@InvoiceDate", FormatOptionalInvoiceDate(model.InvoiceDate));
 
                 cmd.Parameters.AddWithValue("@Document", model.Document ?? "");
                 cmd.Parameters.AddWithValue("@TM", model.TM ?? "");
                 cmd.Parameters.AddWithValue("@DocuSign", model.DocSign ?? "");
 
                 cmd.Parameters.AddWithValue("@DocumentDate",
-                    string.IsNullOrEmpty(model.DocumentDate) ? (object)DBNull.Value : Convert.ToDateTime(model.DocumentDate).ToString("MM.dd.yyyy"));
+                    FormatOptionalInvoiceDate(model.DocumentDate));
 
                 cmd.Parameters.AddWithValue("@ExecutedDate",
-                    string.IsNullOrEmpty(model.ExecutedDate) ? (object)DBNull.Value : Convert.ToDateTime(model.ExecutedDate).ToString("MM.dd.yyyy"));
+                    FormatOptionalInvoiceDate(model.ExecutedDate));
 
                 cmd.Parameters.AddWithValue("@BillingEntity", model.BillingEntity);
                 cmd.Parameters.AddWithValue("@ContactPerson", SerializeEmailConfiguration(model.EmailConfiguration));
@@ -860,6 +863,60 @@ namespace Vendor_Portal.BDM
         }
 
         #endregion
+        private static string FormatInvoiceDate(object value)
+        {
+            if (value == null || value == DBNull.Value || string.IsNullOrWhiteSpace(Convert.ToString(value)))
+            {
+                return string.Empty;
+            }
+
+            DateTime date;
+            if (value is DateTime)
+            {
+                date = (DateTime)value;
+            }
+            else if (!DateTime.TryParseExact(
+                Convert.ToString(value).Trim(),
+                new[] { "MM.dd.yyyy", "M.d.yyyy", "yyyy-MM-dd" },
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out date))
+            {
+                return string.Empty;
+            }
+
+            return date.ToString("MM.dd.yyyy", CultureInfo.InvariantCulture);
+        }
+
+        private static object ParseOptionalInvoiceDate(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return DBNull.Value;
+            }
+
+            DateTime date;
+            if (!DateTime.TryParseExact(
+                value.Trim(),
+                new[] { "MM.dd.yyyy", "M.d.yyyy", "yyyy-MM-dd" },
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out date))
+            {
+                throw new FormatException("Date must be in MM.dd.yyyy format.");
+            }
+
+            return date;
+        }
+
+        private static object FormatOptionalInvoiceDate(string value)
+        {
+            object parsedDate = ParseOptionalInvoiceDate(value);
+            return parsedDate == DBNull.Value
+                ? parsedDate
+                : ((DateTime)parsedDate).ToString("MM.dd.yyyy", CultureInfo.InvariantCulture);
+        }
+
         public class BillingModel
         {
             public string OurClient { get; set; }

@@ -87,6 +87,14 @@
     <div class="col-lg-12">
         <div class="card">
             <div class="card-body">
+                <ul class="nav nav-tabs" role="tablist">
+                    <li class="nav-item"><a class="nav-link active" data-toggle="pill" href="#standardInvoices" role="tab">Standard Invoices</a></li>
+                    <% if (CanViewRlInvoices) { %>
+                    <li class="nav-item"><a class="nav-link" data-toggle="pill" href="#rlInvoices" role="tab" onclick="return bindRlInvoicesToBill();">RL/ Sec Invoices</a></li>
+                    <% } %>
+                </ul>
+                <div class="tab-content pt-3">
+                <div class="tab-pane fade show active" id="standardInvoices" role="tabpanel">
                 <table class="table table-bordered" id="addinvocie_table_1" style="width: 100%;">
                     <thead>
                         <tr>
@@ -127,6 +135,30 @@
                     </thead>
                     <tbody></tbody>
                 </table>
+                </div>
+                <% if (CanViewRlInvoices) { %>
+                <div class="tab-pane fade" id="rlInvoices" role="tabpanel">
+                    <table class="table table-bordered" id="rlInvoicesToBillTable" style="width:100%">
+                        <thead><tr><th>Actions</th><th>Our Client</th><th>Recipient</th><th>Trade Name</th><th>Invoice Date</th><th>Document</th><th>Loan Count</th><th>Cost</th><th>Expected Billing</th><th>Billing Entity</th></tr></thead>
+                    </table>
+                </div>
+                <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="rlHistoryModal" class="modal fade"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><h5>Invoice History</h5><button type="button" class="close" data-dismiss="modal">&times;</button></div><div class="modal-body"><table id="rlHistoryTable" class="table table-bordered" style="width:100%"><thead><tr><th>Field</th><th>Old Value</th><th>New Value</th><th>Updated By</th><th>Updated On</th></tr></thead></table></div></div></div></div>
+    <div id="rlSendStatusModal" class="modal fade" data-backdrop="static" data-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header"><h5 id="rlSendStatusTitle" class="modal-title">Sending invoice</h5></div>
+                <div class="modal-body text-center">
+                    <div id="rlSendStatusSpinner" class="spinner-border text-primary mb-3" role="status"><span class="sr-only">Processing...</span></div>
+                    <div id="rlSendStatusMessage">Generating the invoice and sending email. Please wait...</div>
+                </div>
+                <div id="rlSendStatusFooter" class="modal-footer" style="display:none;">
+                    <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+                </div>
             </div>
         </div>
     </div>

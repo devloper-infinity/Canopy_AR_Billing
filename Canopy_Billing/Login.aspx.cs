@@ -142,11 +142,14 @@ namespace Vendor_Portal
                 ReturnUrl = GetSafeReturnUrl(returnUrl)
             };
 #if DEBUG
-            CompleteLogin(pendingLogin);
-#else
+            if (Request.IsLocal)
+            {
+                CompleteLogin(pendingLogin);
+                return;
+            }
+#endif
             Session[PendingLoginSessionKey] = pendingLogin;
             BeginMfaChallenge(pendingLogin);
-#endif
         }
 
         private void BeginMfaChallenge(PendingLogin pendingLogin)

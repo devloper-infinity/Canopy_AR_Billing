@@ -111,6 +111,13 @@
     <div class="col-lg-12">
         <div class="card">
             <div class="card-body">
+                <ul class="nav nav-tabs" role="tablist">
+                    <li class="nav-item"><a class="nav-link active" data-toggle="pill" href="#standardSentInvoices" role="tab">Review Invoices</a></li>
+                    <% if (CanViewRlInvoices) { %>
+                    <li class="nav-item"><a class="nav-link" data-toggle="pill" href="#sentRlInvoices" role="tab" onclick="return bindSentRlInvoices();">RL/ Sec Invoices</a></li>
+                    <% } %>
+                </ul>
+                <div class="tab-content pt-3"><div class="tab-pane fade show active" id="standardSentInvoices" role="tabpanel">
                 <table class="table table-bordered" id="senttoclient_table" style="width: 100%">
                     <thead>
                         <tr>
@@ -137,6 +144,13 @@
                     <tbody></tbody>
                 </table>
                 <asp:Button ID="btn1_excel" runat="server" Style="display: none;" OnClick="btn1_Click" />
+                </div>
+                <% if (CanViewRlInvoices) { %>
+                <div class="tab-pane fade" id="sentRlInvoices" role="tabpanel">
+                    <table class="table table-bordered" id="sentRlInvoicesTable" style="width:100%"><thead><tr><th>Action</th><th>Our Client</th><th>Recipient</th><th>Trade Name</th><th>Invoice Date</th><th>Document</th><th>Loan Count</th><th>Expected Billing</th><th>Billing Entity</th><th>Sent Date</th></tr></thead></table>
+                </div>
+                <% } %>
+                </div>
             </div>
         </div>
     </div>

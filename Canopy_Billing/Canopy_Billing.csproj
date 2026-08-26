@@ -2874,6 +2874,7 @@
     <Compile Include="App_Code\BLL\bllInvoice.cs" />
     <Compile Include="App_Code\BLL\bllLogin.cs" />
     <Compile Include="App_Code\BLL\MfaService.cs" />
+    <Compile Include="App_Code\BLL\RlInvoiceService.cs" />
     <Compile Include="App_Code\BLL\bllTracking.cs" />
     <Compile Include="App_Code\DAL\DALInvoice.cs" />
     <Compile Include="App_Code\DAL\DALLogin.cs" />
@@ -2908,6 +2909,9 @@
     </Compile>
     <Compile Include="BDM\FileUpload.ashx.cs">
       <DependentUpon>FileUpload.ashx</DependentUpon>
+    </Compile>
+    <Compile Include="BDM\RLInvoicePdf.ashx.cs">
+      <DependentUpon>RLInvoicePdf.ashx</DependentUpon>
     </Compile>
     <Compile Include="BDM\ImportBilling.aspx.cs">
       <DependentUpon>ImportBilling.aspx</DependentUpon>
@@ -3390,6 +3394,9 @@
     <Content Include="Reports\NewSummaryReport1561_Preview.rpt" />
     <Content Include="Reports\PCQCSummary.rpt" />
     <Content Include="Reports\PCQCSummary_Preview.rpt" />
+    <Content Include="BDM\RLInvoicePdf.ashx" />
+    <Content Include="Database\RLInvoiceSentToClient.sql" />
+    <Content Include="Database\RLInvoiceEnhancements.sql" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
     </None>

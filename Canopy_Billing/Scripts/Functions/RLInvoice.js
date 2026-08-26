@@ -205,7 +205,7 @@ function rladdinvoice_submit() {
         BillingEntity: $('#rladdinvoice_billingentity option:selected').text(),
         EmailConfiguration: rladdinvoice_getConfiguredEmails().join(','),
         LoanCount: $('#rmaddinvoice_loancount').val(),
-        Cost: $('#rladdinvoice_cost').val(),
+        RLCost: $('#rladdinvoice_cost').val(),
         ExpectedBilling: $('#rladdinvoice_expectedbilling').val(),
         Notes: $('#rladdinvoice_notes').val()
     };

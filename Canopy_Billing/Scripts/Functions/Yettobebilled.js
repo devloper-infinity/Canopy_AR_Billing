@@ -2,6 +2,83 @@ var ytbilled_table;
 var ytbilled_html = '';
 var senttoclient_table;
 
+function rlInvoiceActions(row, allowSend) {
+    var actions = '';
+    if (row.FilePath) actions += '<a title="Download File" href="DownloadFile.ashx?file=' + encodeURIComponent(row.FilePath) + '"><i class="fa fa-download action-icon"></i></a> ';
+    actions += '<a title="History" href="#" onclick="return showRlInvoiceHistory(' + row.InvoiceID + ');"><i class="fa fa-history action-icon"></i></a> ';
+    actions += '<a title="View Invoice" target="_blank" href="RLInvoicePdf.ashx?id=' + row.InvoiceID + '"><i class="fa fa-file-pdf action-icon"></i></a> ';
+    if (allowSend) actions += '<a title="Send To Client" href="#" onclick="return sendRlInvoiceToClient(' + row.InvoiceID + ');"><i class="fa fa-paper-plane action-icon"></i></a>';
+    return actions;
+}
+
+function bindRlInvoicesToBill() {
+    $('#rlInvoicesToBillTable').DataTable({
+        destroy: true, scrollX: true,
+        ajax: { url: 'Yettobebilled.aspx/GetRlInvoices', type: 'POST', contentType: 'application/json; charset=utf-8', dataSrc: function (r) { return JSON.parse(r.d); } },
+        columns: [
+            { data: null, orderable: false, render: function (d, t, row) { return rlInvoiceActions(row, true); } },
+            { data: 'OurClient' }, { data: 'Recipient' }, { data: 'TradeName' }, { data: 'InvoiceDate' },
+            { data: 'Document' }, { data: 'LoanCount' }, { data: 'Cost' }, { data: 'ExpectedBilling' }, { data: 'BillingEntity' }
+        ]
+    });
+    return false;
+}
+
+function sendRlInvoiceToClient(invoiceId) {
+    showRlSendStatus('Sending invoice', 'Generating the invoice and sending email. Please wait...', true, false);
+
+    $.ajax({
+        url: 'Yettobebilled.aspx/SendRlInvoiceToClient', type: 'POST', contentType: 'application/json; charset=utf-8',
+        data: JSON.stringify({ invoiceId: invoiceId }),
+        success: function (r) {
+            if (r.d.Success) {
+                bindRlInvoicesToBill();
+                showRlSendStatus('Invoice sent', r.d.Message, false, false);
+            } else {
+                showRlSendStatus('Email not sent', r.d.Message, false, true);
+            }
+        },
+        error: function (xhr) {
+            var message = 'Unable to generate or send the invoice email.';
+            if (xhr.responseJSON && xhr.responseJSON.Message) message = xhr.responseJSON.Message;
+            showRlSendStatus('Email not sent', message, false, true);
+        }
+    });
+    return false;
+}
+
+function showRlSendStatus(title, message, processing, isError) {
+    $('#rlSendStatusTitle').text(title).toggleClass('text-danger', isError).toggleClass('text-success', !processing && !isError);
+    $('#rlSendStatusMessage').text(message);
+    $('#rlSendStatusSpinner').toggle(processing);
+    $('#rlSendStatusFooter').toggle(!processing);
+    $('#rlSendStatusModal').modal('show');
+}
+
+function showRlInvoiceHistory(invoiceId) {
+    $.ajax({
+        url: 'Invoice.aspx/GetInvoiceHistory', type: 'POST', contentType: 'application/json; charset=utf-8', data: JSON.stringify({ invoiceId: invoiceId }),
+        success: function (r) {
+            $('#rlHistoryTable').DataTable({ destroy: true, data: r.d, columns: [{data:'FieldName'},{data:'OldValue'},{data:'NewValue'},{data:'UpdatedBy'},{data:'UpdatedOn'}] });
+            $('#rlHistoryModal').modal('show');
+        }
+    });
+    return false;
+}
+
+function bindSentRlInvoices() {
+    $('#sentRlInvoicesTable').DataTable({
+        destroy: true, scrollX: true,
+        ajax: { url: 'SentToClient.aspx/GetSentRlInvoices', type: 'POST', contentType: 'application/json; charset=utf-8', dataSrc: function (r) { return JSON.parse(r.d); } },
+        columns: [
+            { data: null, orderable: false, render: function (d, t, row) { return '<a title="View Invoice" target="_blank" href="RLInvoicePdf.ashx?id=' + row.InvoiceID + '"><i class="fa fa-file-pdf action-icon"></i></a>'; } },
+            { data: 'OurClient' }, { data: 'Recipient' }, { data: 'TradeName' }, { data: 'InvoiceDate' }, { data: 'Document' },
+            { data: 'LoanCount' }, { data: 'ExpectedBilling' }, { data: 'BillingEntity' }, { data: 'SentDateTime' }
+        ]
+    });
+    return false;
+}
+
 function blankForNull(s) {
     return s == "null" || s == null ? "" : s;
 

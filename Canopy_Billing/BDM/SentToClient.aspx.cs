@@ -26,6 +26,7 @@ namespace Vendor_Portal.BDM
 {
     public partial class SentToClient : System.Web.UI.Page
     {
+        protected bool CanViewRlInvoices { get; private set; }
         static string InvoiceNumber;
         static string GroupName;
         static string DomainId;
@@ -39,7 +40,33 @@ namespace Vendor_Portal.BDM
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            int employeeId;
+            CanViewRlInvoices = int.TryParse(User.Identity.Name, out employeeId) && RlInvoiceService.HasAccess(employeeId);
+        }
 
+        [WebMethod]
+        public static string GetSentRlInvoices()
+        {
+            int employeeId;
+            if (!int.TryParse(HttpContext.Current.User.Identity.Name, out employeeId) || !RlInvoiceService.HasAccess(employeeId))
+                throw new HttpException(403, "You do not have access to RL/Sec invoices.");
+
+            DataTable table = RlInvoiceService.GetInvoices(true);
+            List<Dictionary<string, object>> rows = new List<Dictionary<string, object>>();
+            foreach (DataRow dr in table.Rows)
+            {
+                Dictionary<string, object> row = new Dictionary<string, object>();
+                foreach (DataColumn column in table.Columns)
+                {
+                    object value = dr[column] == DBNull.Value ? null : dr[column];
+                    if (column.ColumnName == "SentDateTime" && value is DateTime)
+                        value = ((DateTime)value).ToString("MM.dd.yyyy hh:mm tt");
+                    row[column.ColumnName] = value;
+                }
+                rows.Add(row);
+            }
+            JavaScriptSerializer serializer = new JavaScriptSerializer { MaxJsonLength = int.MaxValue };
+            return serializer.Serialize(rows);
         }
 
         [WebMethod]
