@@ -65,7 +65,7 @@
             BindCostingParameters();
 
             var CurrentUser = "<%= HttpContext.Current.User.Identity.Name.ToString() %>";
-            if (CurrentUser == 9961)
+            if (CurrentUser == 99610)
                 document.getElementById("bpd_price_btnsubmit").style.display = 'none';
             else
                 document.getElementById("bpd_price_btnsubmit").style.display = '';
