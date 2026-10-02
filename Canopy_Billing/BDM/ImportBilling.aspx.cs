@@ -83,6 +83,10 @@ namespace Canopy_Billing.BDM
                 if (BillingType == "StewartCDA")
                     TableName = "dbo.StewartCDA_BPO";
 
+                if (BillingType == "Billing")
+                    TableName = "dbo.TempCanopyBilling";
+                
+
                 #region Griffin
 
                 if (Dt != null)
@@ -158,6 +162,19 @@ namespace Canopy_Billing.BDM
             if (BillingType == "StewartCDA")
             {
                 expectedColumns = new List<string> { "InvoiceDate", "OrderDate", "CompleteDate", "BusinessDays", "InvoiceNumber", "Fee", "OrderID", "LoanNumber", "CaseNumber", "Borrower", "Address1", "Address2", "City", "State", "Zip" };
+            }
+
+            if (BillingType == "Billing")
+            {
+                expectedColumns = new List<string>  {"LoanId",
+                 "createdDate",
+                "submittedDate",
+                "snapshotTakenDate",
+                "buyerName",
+                "sellerName",
+                "scriptName",
+                "TransactionIdentifier"
+                     };
             }
 
             // Get Excel Columns
