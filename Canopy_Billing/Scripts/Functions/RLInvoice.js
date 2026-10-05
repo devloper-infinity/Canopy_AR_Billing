@@ -342,19 +342,19 @@ function rladdinvoice_bindBillingTable() {
                     return `<div class="action-container">${actions}</div>`;
                 }
             },
-            { data: "OurClient" },
-            { data: "Recipient" },
+            { data: "BillingEntity" },
             { data: "TradeName" },
             { data: "InvoiceDate" },
+            { data: "LoanCount" },
+            { data: "ExpectedBilling" },
+            { data: "Recipient" },
+            { data: "RLCost" },
+            { data: "OurClient" },
             { data: "Document" },
             { data: "TM" },
             { data: "DocSign" },
             { data: "DocumentDate" },
             { data: "ExecutedDate" },
-            { data: "LoanCount" },
-            { data: "RLCost" },
-            { data: "ExpectedBilling" },
-            { data: "BillingEntity" },
             { data: "Notes" }
         ],
         initComplete: function () {
@@ -1095,8 +1095,8 @@ $(document).on('click', '.historyBtncost', function () {
                 <tbody>
                 `;
 
-                        history.forEach(x => {
-                            html += `
+        history.forEach(x => {
+            html += `
                     <tr>
                         <td>${x.ClientName || '-'}</td>
                         <td>${x.Rate}</td>
@@ -1105,9 +1105,9 @@ $(document).on('click', '.historyBtncost', function () {
                         <td>${x.ChangedByName}</td>
                         <td>${formatDate(x.ChangedDate)}</td>
                     </tr>`;
-                        });
+        });
 
-                        html += `</tbody></table>`;
+        html += `</tbody></table>`;
 
         Swal.fire({
             title: 'History',
