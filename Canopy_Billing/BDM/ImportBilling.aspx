@@ -491,6 +491,8 @@
                             <a href="Griffin.xlsx"><i class="fas fa-download"></i> Griffin</a>
                             <a href="StewartAVM.xlsx"><i class="fas fa-download"></i> Stewart AVM</a>
                             <a href="StewartCDA.xlsx"><i class="fas fa-download"></i> Stewart CDA</a>
+                            <a href="Billing.xlsx"><i class="fas fa-download"></i> Billing</a>
+                            <a href="ConditionalClearing .xlsx"><i class="fas fa-download"></i> Conditional Clearing </a>
                         </div>
                     </div>
 
@@ -503,6 +505,8 @@
                                 <option value="StewartAVM">Stewart-AVM</option>
                                 <option value="StewartCDA">Stewart-CDA</option>
                                 <option value="Billing">Billing</option>
+                                <option value="ConditionalClearing">Conditional Clearing </option>
+                                
                             </select>
                         </div>
 

@@ -85,7 +85,10 @@ namespace Canopy_Billing.BDM
 
                 if (BillingType == "Billing")
                     TableName = "dbo.TempCanopyBilling";
-                
+
+                if (BillingType == "ConditionalClearing")
+                    TableName = "dbo.ConditionalClearing";
+
 
                 #region Griffin
 
@@ -176,6 +179,16 @@ namespace Canopy_Billing.BDM
                 "TransactionIdentifier"
                      };
             }
+
+            else if (BillingType == "ConditionalClearing")
+            {
+                expectedColumns = new List<string>
+                { "LoanId", "Transaction", "FindingName", "InitialFindingReportedDate", "SellerFindingSubmissionDate", "FindingResponseDate",
+                    "FindingSLA", "FindingsStatus", "FindingTouchCount"
+                };
+            }
+            
+            
 
             // Get Excel Columns
             List<string> excelColumns = dt1.Columns.Cast<DataColumn>().Select(c => c.ColumnName.Trim()).ToList();
