@@ -2853,6 +2853,7 @@
     <Content Include="Scripts\Functions\CanopyBillingReport.js" />
     <Content Include="Scripts\Functions\clientmaster.js" />
     <Content Include="Scripts\Functions\Dashbord.js" />
+    <Content Include="Scripts\Functions\ImportBilling.js" />
     <Content Include="Scripts\Functions\Invoice.js" />
     <Content Include="Scripts\Functions\InvoiceReconciliation.js" />
     <Content Include="Scripts\Functions\Login.js" />
