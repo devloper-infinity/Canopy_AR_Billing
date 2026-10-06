@@ -68,7 +68,7 @@ namespace Vendor_Portal.App_Code.BLL
             HttpContext.Current.ApplicationInstance.CompleteRequest();
         }
 
-        private static DataRow GetInvoice(int invoiceId)
+        public static DataRow GetInvoice(int invoiceId)
         {
             using (SqlConnection con = new SqlConnection(SQLHelper.ConnectionString2))
             using (SqlCommand cmd = new SqlCommand(@"
@@ -104,17 +104,21 @@ namespace Vendor_Portal.App_Code.BLL
             DateTime.TryParseExact(Convert.ToString(row["InvoiceDate"]), "M.d.yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out invoiceDate);
             string date = invoiceDate == DateTime.MinValue ? Convert.ToString(row["InvoiceDate"]) : invoiceDate.ToString("MM/dd/yyyy", CultureInfo.InvariantCulture);
             string dueDate = invoiceDate == DateTime.MinValue ? string.Empty : invoiceDate.AddDays(30).ToString("MM/dd/yyyy", CultureInfo.InvariantCulture);
-            if (row["ConfiguredRate"] == DBNull.Value)
+            string billingMethod = row.Table.Columns.Contains("BillingMethod") ? Convert.ToString(row["BillingMethod"]) : string.Empty;
+            bool enhancedCosting = !string.IsNullOrWhiteSpace(billingMethod);
+            if (!enhancedCosting && row["ConfiguredRate"] == DBNull.Value)
             {
                 throw new InvalidOperationException("Rate is not configured for this Billing Entity and Document Type.");
             }
-            decimal rate = Convert.ToDecimal(row["ConfiguredRate"]);
+            decimal rate = enhancedCosting && row["Cost"] != DBNull.Value ? Convert.ToDecimal(row["Cost"]) : Convert.ToDecimal(row["ConfiguredRate"]);
             decimal quantity;
             if (!decimal.TryParse(Convert.ToString(row["LoanCount"]), NumberStyles.Number, CultureInfo.InvariantCulture, out quantity)) quantity = 0;
             decimal amount = row["ExpectedBilling"] == DBNull.Value ? quantity * rate : Convert.ToDecimal(row["ExpectedBilling"]);
             string activity = Convert.ToString(row["Document"]);
             bool isSecuritization = string.Equals(activity.Trim(), "Securitization", StringComparison.OrdinalIgnoreCase);
             string description = isSecuritization ? "Loan Count (Securitization Services)" : "Income from RL";
+            DataTable costingDetails = GetInvoiceDetails(Convert.ToInt32(row["InvoiceID"]));
+            if (costingDetails.Rows.Count > 0) enhancedCosting = true;
 
             StringBuilder content = new StringBuilder();
             Text(content, 36, 748, 12, "Canopy Financial Technology Partners, LLC", true);
@@ -144,13 +148,55 @@ namespace Vendor_Portal.App_Code.BLL
             ColorText(content, 40, 504, 8, "DATE"); ColorText(content, 125, 504, 8, "ACTIVITY");
             ColorText(content, 240, 504, 8, "DESCRIPTION"); ColorText(content, 425, 504, 8, "QTY");
             ColorText(content, 485, 504, 8, "RATE"); ColorText(content, 540, 504, 8, "AMOUNT");
-            Text(content, 125, 474, 9, activity); Text(content, 240, 474, 9, description);
-            Text(content, 438, 474, 9, Convert.ToString(row["LoanCount"]));
-            Text(content, 482, 474, 9, rate.ToString("N2", CultureInfo.InvariantCulture));
-            Text(content, 535, 474, 9, amount.ToString("N2", CultureInfo.InvariantCulture));
-            content.Append("0.75 G [2 2] 0 d 36 457 m 576 457 l S [] 0 d\n");
-            GrayText(content, 305, 432, 10, "BALANCE DUE");
-            Text(content, 505, 432, 13, "$" + amount.ToString("N2", CultureInfo.InvariantCulture), true);
+            if (!enhancedCosting)
+            {
+                Text(content, 125, 474, 9, activity); Text(content, 240, 474, 9, description);
+                Text(content, 438, 474, 9, Convert.ToString(row["LoanCount"]));
+                Text(content, 482, 474, 9, rate.ToString("N2", CultureInfo.InvariantCulture));
+                Text(content, 535, 474, 9, amount.ToString("N2", CultureInfo.InvariantCulture));
+                content.Append("0.75 G [2 2] 0 d 36 457 m 576 457 l S [] 0 d\n");
+                GrayText(content, 305, 432, 10, "BALANCE DUE");
+                Text(content, 505, 432, 13, "$" + amount.ToString("N2", CultureInfo.InvariantCulture), true);
+            }
+            else
+            {
+            int lineY = 474;
+            if (costingDetails.Rows.Count > 0)
+            {
+                foreach (DataRow detail in costingDetails.Rows)
+                {
+                    Text(content, 125, lineY, 8, activity);
+                    string[] descriptionLines = Wrap(Convert.ToString(detail["BillingDescription"]), 34).ToArray();
+                    Text(content, 240, lineY, 8, descriptionLines.FirstOrDefault() ?? string.Empty);
+                    Text(content, 438, lineY, 8, Convert.ToDecimal(detail["Quantity"]).ToString("N2", CultureInfo.InvariantCulture));
+                    Text(content, 482, lineY, 8, Convert.ToDecimal(detail["Rate"]).ToString("N2", CultureInfo.InvariantCulture));
+                    Text(content, 535, lineY, 8, Convert.ToDecimal(detail["Amount"]).ToString("N2", CultureInfo.InvariantCulture));
+                    foreach (string extraDescription in descriptionLines.Skip(1)) { lineY -= 11; Text(content, 240, lineY, 8, extraDescription); }
+                    lineY -= 24;
+                }
+            }
+            else
+            {
+                string quantityText = billingMethod == "Hourly" ? Convert.ToString(row["HoursWorked"]) : Convert.ToString(row["LoanCount"]);
+                description = billingMethod == "Hourly" ? "Securitization Services - Hourly" : description;
+                Text(content, 125, lineY, 9, activity); Text(content, 240, lineY, 9, description);
+                Text(content, 438, lineY, 9, quantityText);
+                Text(content, 482, lineY, 9, rate.ToString("N2", CultureInfo.InvariantCulture));
+                Text(content, 535, lineY, 9, amount.ToString("N2", CultureInfo.InvariantCulture));
+                lineY -= 24;
+                if (enhancedCosting && row.Table.Columns.Contains("MinimumApplied") && row["MinimumApplied"] != DBNull.Value && Convert.ToBoolean(row["MinimumApplied"]))
+                { GrayText(content, 240, lineY, 8, "Minimum billing adjustment applied"); lineY -= 16; }
+                if (enhancedCosting && row.Table.Columns.Contains("CapApplied") && row["CapApplied"] != DBNull.Value && Convert.ToBoolean(row["CapApplied"]))
+                { GrayText(content, 240, lineY, 8, "Maximum cap adjustment applied"); lineY -= 16; }
+            }
+            string invoiceComment = Convert.ToString(row["Notes"]);
+            foreach (string commentLine in Wrap(invoiceComment, 72)) { GrayText(content, 125, lineY, 8, "Comment: " + commentLine); lineY -= 12; }
+            if (!string.IsNullOrWhiteSpace(invoiceComment)) lineY -= 8;
+            int dividerY = Math.Max(250, lineY);
+            content.AppendFormat(CultureInfo.InvariantCulture, "0.75 G [2 2] 0 d 36 {0} m 576 {0} l S [] 0 d\n", dividerY);
+            GrayText(content, 305, dividerY - 25, 10, "BALANCE DUE");
+            Text(content, 505, dividerY - 25, 13, "$" + amount.ToString("N2", CultureInfo.InvariantCulture), true);
+            }
 
             GrayText(content, 260, 82, 8, "Wiring Instructions:");
             GrayText(content, 258, 69, 8, "JP Morgan Chase Bank");
@@ -159,6 +205,19 @@ namespace Vendor_Portal.App_Code.BLL
             GrayText(content, 249, 30, 8, "Routing #074000010 (ACH)");
 
             return CreatePdf(content.ToString());
+        }
+
+        public static DataTable GetInvoiceDetails(int invoiceId)
+        {
+            using (SqlConnection con = new SqlConnection(SQLHelper.ConnectionString2))
+            using (SqlCommand cmd = new SqlCommand(@"
+                SELECT BillingDescription, Quantity, Rate, Amount
+                FROM dbo.RLInvoiceCostingDetail WHERE InvoiceID=@InvoiceID ORDER BY InvoiceDetailID", con))
+            using (SqlDataAdapter da = new SqlDataAdapter(cmd))
+            {
+                cmd.Parameters.Add("@InvoiceID", SqlDbType.Int).Value = invoiceId;
+                DataTable table = new DataTable(); da.Fill(table); return table;
+            }
         }
 
         public static string SendInvoiceEmail(int invoiceId)

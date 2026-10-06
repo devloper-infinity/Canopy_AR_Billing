@@ -2914,6 +2914,9 @@
     <Compile Include="BDM\RLInvoicePdf.ashx.cs">
       <DependentUpon>RLInvoicePdf.ashx</DependentUpon>
     </Compile>
+    <Compile Include="BDM\RLInvoiceExcel.ashx.cs">
+      <DependentUpon>RLInvoiceExcel.ashx</DependentUpon>
+    </Compile>
     <Compile Include="BDM\ImportBilling.aspx.cs">
       <DependentUpon>ImportBilling.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -3396,6 +3399,7 @@
     <Content Include="Reports\PCQCSummary.rpt" />
     <Content Include="Reports\PCQCSummary_Preview.rpt" />
     <Content Include="BDM\RLInvoicePdf.ashx" />
+    <Content Include="BDM\RLInvoiceExcel.ashx" />
     <Content Include="Database\RLInvoiceSentToClient.sql" />
     <Content Include="Database\RLInvoiceEnhancements.sql" />
     <None Include="Web.Debug.config">

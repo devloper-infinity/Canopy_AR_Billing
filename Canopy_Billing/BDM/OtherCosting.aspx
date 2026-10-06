@@ -118,7 +118,7 @@
 
     .erp-form-grid {
         display: grid;
-        grid-template-columns: minmax(260px, 1.3fr) minmax(180px, .7fr) minmax(220px, .9fr) auto;
+        grid-template-columns: repeat(4, minmax(180px, 1fr));
         gap: 14px;
         align-items: end;
     }
@@ -151,6 +151,13 @@
         justify-content: flex-end;
         gap: 8px;
     }
+
+    .erp-detail-card { grid-column: 1 / -1; border: 1px solid var(--erp-border); border-radius: 9px; padding: 14px; background: #f8fbff; }
+    .erp-detail-toolbar { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px; }
+    .erp-detail-table input { min-width:110px; }
+    .erp-detail-table .product-description { min-width:260px; }
+    .erp-detail-table .invoice-comment { min-width:260px; }
+    .remove-product-row i { color:#fff !important; }
 
     .erp-actions .btn,
     #secrel_btnsubmit,
@@ -272,9 +279,9 @@
     $(document).ready(function () {
         secrel_bindcompany();
         secrel_BindOtherCosting();
+        secrel_toggleConfigurationFields();
     });
 </script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </asp:Content>
 <asp:Content ID="Content2" ContentPlaceHolderID="ContentPlaceHolder1" runat="server">
     <div class="bdm-page">
@@ -298,7 +305,7 @@
             <div class="erp-panel-header">
                 <div>
                     <h5 class="erp-panel-title">Cost Details</h5>
-                    <p class="erp-panel-subtitle">Select client, enter rate, choose costing type, then submit.</p>
+                    <p class="erp-panel-subtitle">Configure the billing basis used when invoices are created.</p>
                 </div>
             </div>
             <div class="erp-panel-body">
@@ -308,19 +315,51 @@
                         <select id="secrel_project" name="secrel_project" class="form-control"></select>
                     </div>
                     <div class="erp-field">
-                        <label for="secrel_rate">Rate</label>
-                        <input id="secrel_rate" name="secrel_rate" class="form-control" />
-                    </div>
-                    <div class="erp-field">
-                        <label for="secrel_type">Type</label>
+                        <label for="secrel_type">Document Type</label>
                         <select id="secrel_type" name="secrel_type" class="form-control">
                             <option value="">Select</option>
                             <option value="Securitization">Securitization</option>
                             <option value="Reliance Letter">Reliance Letter</option>
                         </select>
                     </div>
+                    <div class="erp-field" id="secrel_method_field">
+                        <label for="secrel_method">Billing Method</label>
+                        <select id="secrel_method" class="form-control">
+                            <option value="">Select</option>
+                            <option value="PerFile">Per File</option>
+                            <option value="Hourly">Hourly</option>
+                        </select>
+                    </div>
+                    <div class="erp-field" id="secrel_rate_field">
+                        <label for="secrel_rate">Rate</label>
+                        <input id="secrel_rate" name="secrel_rate" type="number" min="0" step="0.01" class="form-control" />
+                    </div>
+                    <div class="erp-field" id="secrel_minimum_field">
+                        <label for="secrel_minimum">Minimum Amount</label>
+                        <input id="secrel_minimum" type="number" min="0" step="0.01" class="form-control" />
+                    </div>
+                    <div class="erp-field" id="secrel_cap_field">
+                        <label for="secrel_cap">Maximum Cap</label>
+                        <input id="secrel_cap" type="number" min="0" step="0.01" class="form-control" />
+                    </div>
+                    <div class="erp-field">
+                        <label for="secrel_effectivefrom">Effective From</label>
+                        <input id="secrel_effectivefrom" type="date" class="form-control" />
+                    </div>
                     <div class="erp-actions">
                         <button id="secrel_btnsubmit" name="secrel_btnsubmit" class="btn btn-primary" onclick="return secrel_submit();">Submit</button>
+                    </div>
+                    <div id="secrel_product_details" class="erp-detail-card" style="display:none;">
+                        <div class="erp-detail-toolbar">
+                            <div><strong>Reliance Letter product rates</strong><div class="erp-panel-subtitle">Add only the product/rate combinations available for this client.</div></div>
+                            <button type="button" class="btn btn-sm btn-primary" onclick="return secrel_addProductRow();"><i class="fas fa-plus"></i>&nbsp; Add product</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-bordered erp-detail-table">
+                                <thead><tr><th>Reliance Letter Scope / Product Type</th><th>Rate / File</th><th></th></tr></thead>
+                                <tbody id="secrel_product_rows"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -341,7 +380,10 @@
                                 <th class="sort border-top ps-3">Action</th>
                                 <th class="sort border-top ps-3" style="text-wrap: nowrap;">Client</th>
                                 <th class="sort border-top ps-3" style="text-wrap: nowrap;">Rate</th>
-                                <th class="sort border-top ps-3" style="text-wrap: nowrap;">Type</th>
+                                <th class="sort border-top ps-3" style="text-wrap: nowrap;">Document Type</th>
+                                <th class="sort border-top ps-3" style="text-wrap: nowrap;">Billing Method</th>
+                                <th class="sort border-top ps-3" style="text-wrap: nowrap;">Minimum</th>
+                                <th class="sort border-top ps-3" style="text-wrap: nowrap;">Cap</th>
                                 <th class="sort border-top ps-3" style="text-wrap: nowrap;">Added By</th>
                                 <th class="sort border-top ps-3" style="text-wrap: nowrap;">Added Date</th>
                             </tr>

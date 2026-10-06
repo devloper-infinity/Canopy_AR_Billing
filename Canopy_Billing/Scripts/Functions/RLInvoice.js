@@ -1,5 +1,30 @@
 //#region For Invoice Excel Upload
 
+function canopyModalFire(options) {
+    options = options || {};
+    let modal = $('#canopyAjaxAlertModal');
+    if (!modal.length) {
+        $('body').append('<div class="modal fade" id="canopyAjaxAlertModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title"></h5><button type="button" class="close" data-dismiss="modal">&times;</button></div><div class="modal-body"></div><div class="modal-footer"><button type="button" class="btn btn-secondary modal-cancel" data-dismiss="modal">No</button><button type="button" class="btn btn-primary modal-confirm">OK</button></div></div></div></div>');
+        modal = $('#canopyAjaxAlertModal');
+    }
+    modal.find('.modal-title').text(options.title || 'Message');
+    const body = modal.find('.modal-body').empty();
+    options.html ? body.html(options.html) : body.text(options.text || '');
+    modal.find('.modal-cancel').toggle(!!options.showCancelButton).text(options.cancelButtonText || 'No');
+    modal.find('.modal-confirm').text(options.confirmButtonText || 'OK');
+    return new Promise(function (resolve) {
+        modal.off('.canopyAlert');
+        modal.on('click.canopyAlert', '.modal-confirm', function () { modal.modal('hide'); resolve({ isConfirmed: true }); });
+        modal.on('hidden.bs.modal.canopyAlert', function () { resolve({ isConfirmed: false }); });
+        modal.modal('show');
+    });
+}
+
+window.Swal = { fire: canopyModalFire };
+
+let rladdinvoice_currentCosting = null;
+let rladdinvoice_pendingEdit = null;
+
 function rlinvoice_bindBillingTable1() {
     $('#rlinvoice_billingTable').DataTable({
         processing: true,
@@ -190,6 +215,28 @@ function rlinvocie_validate() {
 
 function rladdinvoice_submit() {
     let isEdit = $('#formMode').val() === 'edit';
+    const documentType = $('#rladdinvoice_document').val();
+    if (!$('#rladdinvoice_invoicedate').val() || !documentType || !$('#rladdinvoice_billingentity').val()) {
+        Swal.fire({ icon: 'warning', title: 'Required fields', text: 'Invoice Date, Document, and Billing Entity are required.' });
+        return false;
+    }
+    const invoiceMethod = rladdinvoice_currentCosting ? (rladdinvoice_currentCosting.BillingMethod || $('#rladdinvoice_billingmethod').val()) : $('#rladdinvoice_billingmethod').val();
+    if (documentType === 'Securitization' && !invoiceMethod) {
+        Swal.fire({ icon: 'warning', title: 'Billing Method', text: 'Select Per File or Hourly.' });
+        return false;
+    }
+    if (invoiceMethod === 'Hourly' && Number($('#rladdinvoice_hoursworked').val() || 0) <= 0) {
+        Swal.fire({ icon: 'warning', title: 'Hours Worked', text: 'Enter Hours Worked greater than zero.' });
+        return false;
+    }
+    if (invoiceMethod === 'PerFile' && Number($('#rmaddinvoice_loancount').val() || 0) <= 0) {
+        Swal.fire({ icon: 'warning', title: 'File Count', text: 'Enter File Count greater than zero.' });
+        return false;
+    }
+    if ($('#rladdinvoice_product_costing').is(':visible') && rladdinvoice_collectProductDetails().length === 0) {
+        Swal.fire({ icon: 'warning', title: 'Reliance Letter scope', text: 'Select one scope and enter its quantity.' });
+        return false;
+    }
     var data = {
         //InvoiceID: $('#hdnInvoiceID').val(),
         InvoiceID: isEdit ? $('#hdnInvoiceID').val() : 0,
@@ -203,23 +250,35 @@ function rladdinvoice_submit() {
         DocumentDate: $('#rladdinvoice_documentdate').val(),
         ExecutedDate: $('#rladdinvoice_executeddate').val(),
         BillingEntity: $('#rladdinvoice_billingentity option:selected').text(),
+        ProjectID: Number($('#rladdinvoice_billingentity').val() || 0),
         EmailConfiguration: rladdinvoice_getConfiguredEmails().join(','),
         LoanCount: $('#rmaddinvoice_loancount').val(),
         RLCost: $('#rladdinvoice_cost').val(),
         ExpectedBilling: $('#rladdinvoice_expectedbilling').val(),
-        Notes: $('#rladdinvoice_notes').val()
+        Notes: $('#rladdinvoice_notes').val(),
+        CostingRateID: rladdinvoice_currentCosting ? Number(rladdinvoice_currentCosting.RateID) : 0,
+        BillingMethod: invoiceMethod,
+        HoursWorked: Number($('#rladdinvoice_hoursworked').val() || 0),
+        MinimumAmount: Number($('#rladdinvoice_minimum').val() || 0),
+        MaximumCap: Number($('#rladdinvoice_cap').val() || 0),
+        ProductDetails: rladdinvoice_collectProductDetails(),
+        UpdateMasterRates: false
     };
     CanopyUI.debug(data);
     let url = ($('#formMode').val() === 'edit')
         ? "Invoice.aspx/UpdateInvoice"
         : "Invoice.aspx/SaveInvoice";
-    $.ajax({
+    const saveInvoice = function () { $.ajax({
         url: url,
         type: "POST",
         contentType: "application/json; charset=utf-8",
         data: JSON.stringify({ model: data }),
         success: function (res) {
             var result = res.d;
+            if (result && result.Status === false) {
+                Swal.fire({ icon: 'error', title: 'Unable to save', text: result.Message });
+                return;
+            }
             Swal.fire({
                 icon: 'success',
                 title: 'Success',
@@ -252,7 +311,12 @@ function rladdinvoice_submit() {
                 text: errMsg
             });
         }
-    });
+    }); };
+
+    if (rladdinvoice_hasMasterRateChanges()) {
+        canopyModalFire({ title: 'Rate changed', text: 'The rate for this client has changed. Do you want to update the master data?', showCancelButton: true, confirmButtonText: 'Yes, update master', cancelButtonText: 'No' })
+            .then(function (result) { data.UpdateMasterRates = result.isConfirmed; saveInvoice(); });
+    } else saveInvoice();
 
     return false;
 }
@@ -276,6 +340,14 @@ function clearForm() {
     $('#rladdinvoice_cost').val('');
     $('#rladdinvoice_expectedbilling').val('');
     $('#rladdinvoice_notes').val('');
+    $('#rladdinvoice_billingmethod, #rladdinvoice_hoursworked, #rladdinvoice_minimum, #rladdinvoice_cap').val('');
+    $('#rladdinvoice_product_rows').empty();
+    $('#rladdinvoice_flexible_costing, #rladdinvoice_product_costing').hide();
+    $('#rladdinvoice_loancount_field, #rladdinvoice_cost_field').show();
+    $('#rladdinvoice_loancount_label').text('Loan Count');
+    $('#rladdinvoice_cost_label').text('Cost');
+    $('#rladdinvoice_cost').prop('readonly', false);
+    rladdinvoice_currentCosting = null;
 }
 
 function rladdinvoice_bindBillingTable() {
@@ -309,37 +381,44 @@ function rladdinvoice_bindBillingTable() {
             {
                 data: null,
                 render: function (data, type, row) {
+                    let actions = `<div class="dropdown invoice-action-menu">
+                        <button type="button" class="btn btn-sm btn-secondary dropdown-toggle"
+                            data-toggle="dropdown" data-boundary="viewport" aria-haspopup="true" aria-expanded="false">
+                            <i class="fas fa-cog"></i>&nbsp; Actions
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-right">`;
 
-
-                    let actions = '';
-
-                    // ?? Edit
                     if (!row.IsVerify) {
-                        actions += `<i class="fa fa-edit action-icon editBtn" 
-                        title="Edit" data-id="${row.InvoiceID}"></i>`;
+                        actions += `<button type="button" class="dropdown-item editBtn" data-id="${row.InvoiceID}">
+                            <i class="fas fa-edit"></i><span>Edit</span>
+                        </button>`;
+                        actions += `<button type="button" class="dropdown-item deleteBtn" data-id="${row.InvoiceID}">
+                            <i class="fas fa-trash-alt"></i><span>Delete</span>
+                        </button>`;
                     } else {
-                        actions += `<i class="fa fa-edit action-icon disabled" 
-                        title="Locked (Verified)"></i>`;
+                        actions += `<button type="button" class="dropdown-item" disabled title="Locked (Verified)">
+                            <i class="fas fa-edit"></i><span>Edit (Verified)</span>
+                        </button>`;
                     }
 
-                    // ?? History
-                    actions += `<i class="fa fa-history action-icon historyBtn" 
-                    title="History" data-id="${row.InvoiceID}"></i>`;
+                    actions += `<button type="button" class="dropdown-item historyBtn" data-id="${row.InvoiceID}">
+                        <i class="fas fa-history"></i><span>History</span>
+                    </button>`;
+                    actions += `<button type="button" class="dropdown-item uploadBtn" data-id="${row.InvoiceID}">
+                        <i class="fas fa-plus-circle"></i><span>Upload</span>
+                    </button>`;
 
-                    // ? Upload
-                    actions += `<i class="fa fa-plus-circle action-icon uploadBtn" 
-                    title="Upload" data-id="${row.InvoiceID}"></i>`;
-
-                    // ?? View (if file exists)
                     if (row.FilePath) {
-                        actions += `<i class="fa fa-eye action-icon viewBtn" 
-                        title="View" data-file="${row.FilePath}"></i>`;
-
-                        actions += `<i class="fa fa-download action-icon downloadBtn" 
-                        title="Download" data-file="${row.FilePath}"></i>`;
+                        actions += `<button type="button" class="dropdown-item viewBtn" data-file="${row.FilePath}">
+                            <i class="fas fa-eye"></i><span>View</span>
+                        </button>`;
+                        actions += `<button type="button" class="dropdown-item downloadBtn" data-file="${row.FilePath}">
+                            <i class="fas fa-download"></i><span>Download</span>
+                        </button>`;
                     }
 
-                    return `<div class="action-container">${actions}</div>`;
+                    actions += `</div></div>`;
+                    return actions;
                 }
             },
             { data: "BillingEntity" },
@@ -347,8 +426,9 @@ function rladdinvoice_bindBillingTable() {
             { data: "InvoiceDate" },
             { data: "LoanCount" },
             { data: "ExpectedBilling" },
-            { data: "Recipient" },
             { data: "RLCost" },
+            { data: "Recipient" },
+
             { data: "OurClient" },
             { data: "Document" },
             { data: "TM" },
@@ -555,6 +635,42 @@ $(document).on('click', '#btnVerifySubmit', function () {
     return false;
 });
 
+$(document).on('click', '.deleteBtn', function () {
+    const invoiceId = Number($(this).data('id'));
+
+    Swal.fire({
+        icon: 'warning',
+        title: 'Delete invoice?',
+        text: 'This action cannot be undone.',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        confirmButtonText: 'Delete'
+    }).then(function (result) {
+        if (!result.isConfirmed) return;
+
+        $.ajax({
+            type: 'POST',
+            url: 'Invoice.aspx/DeleteInvoice',
+            contentType: 'application/json; charset=utf-8',
+            data: JSON.stringify({ invoiceId: invoiceId }),
+            success: function (res) {
+                if (!res.d.Success) {
+                    Swal.fire({ icon: 'error', title: 'Unable to delete', text: res.d.Message });
+                    $('#rladdinvoice_billingTable').DataTable().ajax.reload(null, false);
+                    return;
+                }
+
+                Swal.fire({ icon: 'success', title: 'Deleted', text: res.d.Message });
+                $('#verifySection').hide();
+                $('#rladdinvoice_billingTable').DataTable().ajax.reload(null, false);
+            },
+            error: function () {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'The invoice could not be deleted.' });
+            }
+        });
+    });
+});
+
 function rladdinvoice_bindcompany() {
     var select = document.getElementById("rladdinvoice_billingentity");
     let options = select.getElementsByTagName('option');
@@ -578,28 +694,7 @@ function rladdinvoice_getRLSecRate(emailConfiguration) {
 
     var select = document.getElementById("rladdinvoice_billingentity");
     var projectid = select.options[select.selectedIndex].value;
-    var projectname = select.options[select.selectedIndex].text;
-
-    $.ajax({
-        type: "POST", url: "Invoice.aspx/GetRLCostingByProject", data: "{ProjectID:" + projectid + "}", dataType: "json", contentType: "application/json",
-        success: function (res) {
-            var dataArray = JSON.parse(res.d);
-            if (dataArray.length <= 0) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Rate Configuration',
-                    text: "Rate not configured for '" + projectname + "'"
-                });
-                //alert("Rate not configured for '" + projectname + "'");
-                document.getElementById("rladdinvoice_cost").value = "0";
-            }
-            else {
-                $.each(dataArray, function (data, value) {
-                    document.getElementById("rladdinvoice_cost").value = value.Rate;
-                })
-            }
-        }
-    });
+    rladdinvoice_loadCostingConfiguration();
 
     // let clientId = $('#rladdinvoice_billingentity').val();
     let clientName = $('#rladdinvoice_billingentity option:selected').text();
@@ -620,6 +715,168 @@ function rladdinvoice_getRLSecRate(emailConfiguration) {
         rladdinvoice_refreshEmailUI();
         $('#rladdinvoice_newemail').val('');
     }
+}
+
+function rladdinvoice_resetCostingUI() {
+    rladdinvoice_currentCosting = null;
+    $('#rladdinvoice_flexible_costing, #rladdinvoice_product_costing').hide();
+    $('#rladdinvoice_product_rows').empty();
+    $('#rladdinvoice_loancount_field, #rladdinvoice_cost_field').show();
+    $('#rladdinvoice_loancount_label').text('Loan Count');
+    $('#rladdinvoice_cost_label').text('Cost');
+    $('#rladdinvoice_cost').prop('readonly', false).removeAttr('data-master-rate');
+    $('#rladdinvoice_billingmethod').prop('disabled', false);
+    $('#rladdinvoice_billingmethod, #rladdinvoice_hoursworked, #rladdinvoice_minimum, #rladdinvoice_cap').val('');
+    $('#rladdinvoice_minimum, #rladdinvoice_cap').removeAttr('data-master-value');
+    $('#rladdinvoice_adjustment').text('');
+}
+
+function rladdinvoice_loadCostingConfiguration() {
+    const projectId = Number($('#rladdinvoice_billingentity').val() || 0);
+    const documentType = $('#rladdinvoice_document').val();
+    const invoiceDate = $('#rladdinvoice_invoicedate').val();
+    rladdinvoice_resetCostingUI();
+    if (!projectId || !documentType) return;
+
+    $.ajax({
+        type: 'POST', url: 'Invoice.aspx/GetFlexibleCosting', contentType: 'application/json; charset=utf-8',
+        data: JSON.stringify({ projectId: projectId, documentType: documentType, invoiceDate: invoiceDate }),
+        success: function (res) {
+            const result = res.d || {}, header = result.Header;
+            if (!header) {
+                $('#rladdinvoice_cost').val('0');
+                if (documentType === 'Securitization') {
+                    $('#rladdinvoice_flexible_costing').show();
+                    $('#rladdinvoice_billingmethod').prop('disabled', false).val('');
+                    $('#rladdinvoice_cost').prop('readonly', false);
+                    rladdinvoice_manualMethodChanged();
+                } else if (documentType === 'Reliance Letter') {
+                    $('#rladdinvoice_product_costing').show();
+                    $('#rladdinvoice_loancount_field, #rladdinvoice_cost_field').hide();
+                    rladdinvoice_addManualProductRow();
+                }
+                Swal.fire({ icon: 'info', title: 'Rate not configured', text: 'Enter the rate while raising this invoice. It will also be saved in costing configuration.' });
+                return;
+            }
+            rladdinvoice_currentCosting = header;
+            $('#rladdinvoice_cost').val(header.Rate || 0);
+            const pending = rladdinvoice_pendingEdit;
+
+            if (documentType === 'Securitization') {
+                const configuredMethod = header.BillingMethod || '';
+                const hourly = configuredMethod === 'Hourly';
+                $('#rladdinvoice_flexible_costing').show();
+                $('#rladdinvoice_billingmethod').prop('disabled', !!configuredMethod).val(configuredMethod);
+                $('#rladdinvoice_hours_field').toggle(hourly);
+                $('#rladdinvoice_loancount_field').toggle(!hourly);
+                $('#rladdinvoice_loancount_label').text('File Count');
+                $('#rladdinvoice_cost_label').text(hourly ? 'Hourly Rate' : 'Rate / File');
+                $('#rladdinvoice_cost').prop('readonly', false).attr('data-master-rate', Number(header.Rate || 0));
+                $('#rladdinvoice_minimum').val(header.MinimumAmount || 0).attr('data-master-value', Number(header.MinimumAmount || 0));
+                $('#rladdinvoice_cap').val(header.MaximumCap || 0).attr('data-master-value', Number(header.MaximumCap || 0));
+                if (pending) $('#rladdinvoice_hoursworked').val(pending.HoursWorked || '');
+                if (!configuredMethod) rladdinvoice_manualMethodChanged();
+            } else if (documentType === 'Reliance Letter') {
+                $('#rladdinvoice_product_costing').show();
+                $('#rladdinvoice_loancount_field, #rladdinvoice_cost_field').hide();
+                const saved = pending && pending.ProductDetails ? pending.ProductDetails : [];
+                (result.Details || []).forEach(function (detail) {
+                    const prior = saved.find(function (item) { return Number(item.CostingDetailID) === Number(detail.CostingDetailID); }) || {};
+                    rladdinvoice_addInvoiceProductRow(detail, prior);
+                });
+                if (!result.Details || !result.Details.length) rladdinvoice_addManualProductRow(header.Rate);
+                if (result.Details && result.Details.length > 1 && saved.length === 0) {
+                    $('#rladdinvoice_product_rows .scope-select').prop('checked', false);
+                    rladdinvoice_updateScopeSelection();
+                }
+                rladdinvoice_refreshDeleteButtons();
+            }
+            getexpectedamount();
+            rladdinvoice_pendingEdit = null;
+        }
+    });
+}
+
+function rladdinvoice_addInvoiceProductRow(config, saved) {
+    const quantity = saved.Quantity == null ? 0 : saved.Quantity;
+    const row = $('<tr></tr>').attr('data-detail-id', config.CostingDetailID).attr('data-rate', config.Rate).attr('data-master-rate', config.Rate);
+    row.append($('<td class="text-center"></td>').append($('<input type="radio" name="rlInvoiceScope" class="scope-select" />').prop('checked', saved.Quantity != null)));
+    row.append($('<td class="invoice-product"></td>').text(config.ProductType));
+    row.append($('<td></td>').append($('<input type="number" min="0" step="0.01" class="form-control invoice-product-quantity" />').val(quantity)));
+    row.append($('<td></td>').append($('<input type="number" min="0" step="0.01" class="form-control invoice-manual-rate" />').val(Number(config.Rate).toFixed(2))));
+    row.append($('<td class="invoice-product-amount"></td>').text((Number(quantity) * Number(config.Rate)).toFixed(2)));
+    row.append('<td><button type="button" class="btn btn-sm btn-danger invoice-remove-product" title="Delete"><i class="fas fa-trash-alt"></i></button></td>');
+    $('#rladdinvoice_product_rows').append(row);
+    rladdinvoice_refreshDeleteButtons();
+}
+
+$(document).on('input', '.invoice-product-quantity', getexpectedamount);
+
+function rladdinvoice_collectProductDetails() {
+    const details = [];
+    $('#rladdinvoice_product_rows tr').has('.scope-select:checked').each(function () {
+        const row = $(this), quantity = Number(row.find('.invoice-product-quantity').val() || 0), rate = Number(row.attr('data-rate') || 0);
+        if (quantity > 0) details.push({ CostingDetailID: Number(row.attr('data-detail-id') || 0), ProductType: row.find('.invoice-product-input').length ? row.find('.invoice-product-input').val().trim() : row.find('.invoice-product').text(), Quantity: quantity, Rate: rate, Amount: quantity * rate });
+    });
+    return details;
+}
+
+function rladdinvoice_manualMethodChanged() {
+    const method = $('#rladdinvoice_billingmethod').val();
+    const hourly = method === 'Hourly';
+    $('#rladdinvoice_hours_field').toggle(hourly);
+    $('#rladdinvoice_loancount_field').toggle(!hourly);
+    $('#rladdinvoice_loancount_label').text('File Count');
+    $('#rladdinvoice_cost_label').text(hourly ? 'Hourly Rate' : 'Rate / File');
+    $('#rladdinvoice_minimum').closest('.erp-field').toggle(method === 'PerFile');
+    getexpectedamount();
+}
+
+function rladdinvoice_addManualProductRow(defaultRate) {
+    defaultRate = Number(defaultRate || 0);
+    const scopeNumber = $('#rladdinvoice_product_rows tr').length + 1;
+    const row = $('<tr data-detail-id="0"></tr>').attr('data-rate', defaultRate).attr('data-master-rate', defaultRate);
+    row.append($('<td class="text-center"></td>').append('<input type="radio" name="rlInvoiceScope" class="scope-select" checked />'));
+    row.append($('<td></td>').append($('<input type="text" maxlength="250" class="form-control invoice-product-input" />').val('Reliance Letter Scope ' + scopeNumber)));
+    row.append($('<td></td>').append('<input type="number" min="0" step="0.01" class="form-control invoice-product-quantity" />'));
+    row.append($('<td></td>').append($('<input type="number" min="0" step="0.01" class="form-control invoice-manual-rate" />').val(defaultRate || '')));
+    row.append('<td class="invoice-product-amount">0.00</td>');
+    row.append('<td><button type="button" class="btn btn-sm btn-danger invoice-remove-product"><i class="fas fa-trash-alt"></i></button></td>');
+    $('#rladdinvoice_product_rows').append(row);
+    rladdinvoice_refreshDeleteButtons();
+    return false;
+}
+
+$(document).on('click', '.invoice-remove-product', function () { $(this).closest('tr').remove(); rladdinvoice_refreshDeleteButtons(); getexpectedamount(); });
+$(document).on('input', '.invoice-manual-rate', function () { $(this).closest('tr').attr('data-rate', Number($(this).val() || 0)); getexpectedamount(); });
+$(document).on('change', '.scope-select', function () { rladdinvoice_updateScopeSelection(); getexpectedamount(); });
+
+function rladdinvoice_hasMasterRateChanges() {
+    if (!rladdinvoice_currentCosting) return false;
+    if ($('#rladdinvoice_document').val() === 'Securitization')
+        return Number($('#rladdinvoice_cost').val() || 0) !== Number($('#rladdinvoice_cost').attr('data-master-rate') || 0)
+            || Number($('#rladdinvoice_minimum').val() || 0) !== Number($('#rladdinvoice_minimum').attr('data-master-value') || 0)
+            || Number($('#rladdinvoice_cap').val() || 0) !== Number($('#rladdinvoice_cap').attr('data-master-value') || 0);
+    let changed = false;
+    $('#rladdinvoice_product_rows tr').each(function () {
+        if (Number($(this).attr('data-detail-id') || 0) > 0 && Number($(this).attr('data-rate') || 0) !== Number($(this).attr('data-master-rate') || 0)) changed = true;
+    });
+    return changed;
+}
+
+function rladdinvoice_refreshDeleteButtons() {
+    const showDelete = $('#rladdinvoice_product_rows tr').length > 1;
+    $('#rladdinvoice_product_rows .invoice-remove-product').toggle(showDelete);
+    if ($('#rladdinvoice_product_rows tr').length === 1) $('#rladdinvoice_product_rows .scope-select').prop('checked', true);
+    rladdinvoice_updateScopeSelection();
+}
+
+function rladdinvoice_updateScopeSelection() {
+    $('#rladdinvoice_product_rows tr').each(function () {
+        const selected = $(this).find('.scope-select').is(':checked');
+        $(this).toggleClass('table-active', selected);
+        $(this).find('.invoice-product-quantity, .invoice-manual-rate').prop('disabled', !selected);
+    });
 }
 
 function rladdinvoice_loadEmails(clientName, configuredEmails) {
@@ -789,6 +1046,7 @@ $(document).on('click', '.editBtn', function () {
     $('#rladdinvoice_cost').val(data.RLCost);
     $('#rladdinvoice_expectedbilling').val(data.ExpectedBilling);
     $('#rladdinvoice_notes').val(data.Notes);
+    rladdinvoice_pendingEdit = data;
 
     // ? Billing Entity
     //$('#rladdinvoice_billingentity').val(data.BillingEntity);
@@ -892,13 +1150,25 @@ function setBillingEntityByText(text, emailConfiguration) {
 }
 
 function getexpectedamount() {
-    var loancount = document.getElementById("rmaddinvoice_loancount").value;
-    var rate = document.getElementById("rladdinvoice_cost").value;
-    if (rate != "") {
-        if (loancount != "") {
-            document.getElementById("rladdinvoice_expectedbilling").value = parseFloat(loancount) * parseFloat(rate);
-        }
+    let amount = 0;
+    if ($('#rladdinvoice_product_costing').is(':visible')) {
+        $('#rladdinvoice_product_rows tr').has('.scope-select:checked').each(function () {
+            const row = $(this), line = Number(row.find('.invoice-product-quantity').val() || 0) * Number(row.attr('data-rate') || 0);
+            row.find('.invoice-product-amount').text(line.toFixed(2));
+            amount += line;
+        });
+    } else {
+        const rate = Number($('#rladdinvoice_cost').val() || 0);
+        const method = rladdinvoice_currentCosting ? rladdinvoice_currentCosting.BillingMethod : $('#rladdinvoice_billingmethod').val();
+        const quantity = method === 'Hourly' ? Number($('#rladdinvoice_hoursworked').val() || 0) : Number($('#rmaddinvoice_loancount').val() || 0);
+        const base = quantity * rate, minimum = Number($('#rladdinvoice_minimum').val() || 0), cap = Number($('#rladdinvoice_cap').val() || 0);
+        amount = base;
+        const adjustments = [];
+        if (method === 'PerFile' && minimum > 0 && amount < minimum) { amount = minimum; adjustments.push('Minimum billing applied'); }
+        if (cap > 0 && amount > cap) { amount = cap; adjustments.push('Maximum cap applied'); }
+        $('#rladdinvoice_adjustment').text(adjustments.join(' • '));
     }
+    $('#rladdinvoice_expectedbilling').val(amount.toFixed(2));
 }
 
 function rladdinvoice_closeModal() {
@@ -955,6 +1225,8 @@ function formatDateForInput(dateString) {
         return `${yyyy}-${mm}-${dd}`; // yyyy-MM-dd
     }
 
+    const jsonDate = /\/Date\((\d+)\)\//.exec(dateString);
+    if (jsonDate) dateString = new Date(Number(jsonDate[1]));
     // Handle ISO or other formats
     let date = new Date(dateString);
     if (isNaN(date)) return "";
@@ -985,6 +1257,40 @@ function secrel_bindcompany() {
             })
         }
     });
+}
+
+function secrel_toggleConfigurationFields() {
+    const type = $('#secrel_type').val();
+    const method = $('#secrel_method').val();
+    const isSec = type === 'Securitization';
+    const isRl = type === 'Reliance Letter';
+
+    $('#secrel_method_field').toggle(isSec);
+    $('#secrel_rate_field').toggle(isSec);
+    $('#secrel_minimum_field').toggle(isSec && method === 'PerFile');
+    $('#secrel_cap_field').toggle(isSec);
+    $('#secrel_product_details').toggle(isRl);
+    $('#secrel_rate_field label').text(method === 'Hourly' ? 'Hourly Rate' : 'Rate / File');
+}
+
+$(document).on('change', '#secrel_type, #secrel_method', secrel_toggleConfigurationFields);
+
+function secrel_addProductRow(detail) {
+    detail = detail || {};
+    if (!detail.ProductType) detail.ProductType = 'Reliance Letter Scope ' + ($('#secrel_product_rows tr').length + 1);
+    const row = $('<tr></tr>');
+    row.append($('<td></td>').append($('<input type="text" maxlength="250" class="form-control product-description" />').val(detail.ProductType || '')));
+    row.append($('<td></td>').append($('<input type="number" min="0" step="0.01" class="form-control product-rate" />').val(detail.Rate == null ? '' : detail.Rate)));
+    row.append($('<td></td>').append('<button type="button" class="btn btn-sm btn-danger remove-product-row" title="Delete"><i class="fas fa-trash-alt"></i></button>'));
+    $('#secrel_product_rows').append(row);
+    secrel_refreshDeleteButtons();
+    return false;
+}
+
+$(document).on('click', '.remove-product-row', function () { $(this).closest('tr').remove(); secrel_refreshDeleteButtons(); });
+
+function secrel_refreshDeleteButtons() {
+    $('#secrel_product_rows .remove-product-row').toggle($('#secrel_product_rows tr').length > 1);
 }
 
 function secrel_BindOtherCosting() {
@@ -1024,6 +1330,9 @@ function secrel_BindOtherCosting() {
                     { data: 'ProjectName' },
                     { data: 'Rate' },
                     { data: 'Type' },
+                    { data: 'BillingMethod', defaultContent: '' },
+                    { data: 'MinimumAmount', defaultContent: '' },
+                    { data: 'MaximumCap', defaultContent: '' },
                     { data: 'AddedByName' },
                     { data: 'AddedDate1' }
 
@@ -1132,11 +1441,29 @@ $(document).on('click', '#secrel_table tbody .editBtncost', function () {
 
     CanopyUI.debug(data);
 
-    $('#secrel_project').val(data.ProjectId);
-    $('#secrel_rate').val(data.Rate);
-    $('#secrel_type').val(data.Type);
-
-    $('#secrel_submitBtn').data('edit-id', data.ID);
+    $.ajax({
+        type: 'POST',
+        url: 'OtherCosting.aspx/GetCostingConfiguration',
+        contentType: 'application/json; charset=utf-8',
+        data: JSON.stringify({ rateId: data.RateID }),
+        success: function (res) {
+            const result = res.d;
+            if (!result.Status) { Swal.fire({ icon: 'error', title: 'Error', text: result.Message }); return; }
+            const header = result.Header;
+            $('#secrel_project').val(header.ProjectId);
+            $('#secrel_rate').val(header.Rate);
+            $('#secrel_type').val(header.Type);
+            $('#secrel_method').val(header.BillingMethod || '');
+            $('#secrel_minimum').val(header.MinimumAmount == null ? '' : header.MinimumAmount);
+            $('#secrel_cap').val(header.MaximumCap == null ? '' : header.MaximumCap);
+            $('#secrel_effectivefrom').val(formatDateForInput(header.EffectiveFrom));
+            $('#secrel_product_rows').empty();
+            (result.Details || []).forEach(secrel_addProductRow);
+            $('#secrel_btnsubmit').data('edit-id', header.RateID).text('Update');
+            secrel_toggleConfigurationFields();
+            $('html, body').animate({ scrollTop: 0 }, 300);
+        }
+    });
 });
 
 function secrel_submit() {
@@ -1146,28 +1473,45 @@ function secrel_submit() {
         alert("Please select project.");
         return false;
     }
-    var rate = document.getElementById("secrel_rate").value;
-    if (rate == "") {
-        alert("Please enter rate.");
-        return false;
-    }
     var ddltype = document.getElementById("secrel_type");
     var type = ddltype.options[ddltype.selectedIndex].value;
     if (type == "") {
         alert("Please enter type.");
         return false;
     }
-    var editId = $('#secrel_submitBtn').data('edit-id');
-
-    if (editId) {
-        // ? UPDATE
-        PageMethods.UpdateOtherRates(editId, projectid, rate, type, secrel_OnSuccess, secrel_OnError);
-    } else {
-        // ? INSERT
-        PageMethods.InsertOtherRates(projectid, rate, type, secrel_OnSuccess, secrel_OnError);
+    const method = $('#secrel_method').val();
+    if (type === 'Securitization' && !method) {
+        Swal.fire({ icon: 'warning', title: 'Billing Method', text: 'Select Per File or Hourly.' });
+        return false;
+    }
+    if (type === 'Securitization' && Number($('#secrel_rate').val() || 0) <= 0) {
+        Swal.fire({ icon: 'warning', title: 'Rate', text: 'Enter a rate greater than zero.' });
+        return false;
     }
 
-    //PageMethods.InsertOtherRates(projectid, rate, type, secrel_OnSuccess, secrel_OnError);
+    const details = [];
+    $('#secrel_product_rows tr').each(function () {
+        const row = $(this);
+        const product = row.find('.product-description').val().trim();
+        const rate = row.find('.product-rate').val();
+        if (product || rate) details.push({ ProductType: product, Rate: Number(rate) });
+    });
+
+    const model = {
+        RateID: Number($('#secrel_btnsubmit').data('edit-id') || 0),
+        ProjectID: Number(projectid), DocumentType: type, BillingMethod: method,
+        Rate: Number($('#secrel_rate').val() || 0),
+        MinimumAmount: Number($('#secrel_minimum').val() || 0),
+        MaximumCap: Number($('#secrel_cap').val() || 0),
+        EffectiveFrom: $('#secrel_effectivefrom').val() || null,
+        Details: details
+    };
+    $.ajax({
+        type: 'POST', url: 'OtherCosting.aspx/SaveCostingConfiguration',
+        contentType: 'application/json; charset=utf-8', data: JSON.stringify({ model: model }),
+        success: function (res) { res.d.Status ? secrel_OnSuccess(1) : Swal.fire({ icon: 'error', title: 'Unable to save', text: res.d.Message }); },
+        error: secrel_OnError
+    });
     return false;
 }
 
@@ -1176,13 +1520,16 @@ function secrel_OnSuccess(result) {
         Swal.fire({
             icon: 'success',
             title: 'Success',
-            text: 'Rate added auccessfully.'
+            text: 'Costing configuration saved successfully.'
         });
         // Reset form
         $('#secrel_project').val('');
         $('#secrel_rate').val('');
         $('#secrel_type').val('');
-        $('#secrel_submitBtn').removeData('edit-id');
+        $('#secrel_method, #secrel_minimum, #secrel_cap, #secrel_effectivefrom').val('');
+        $('#secrel_product_rows').empty();
+        $('#secrel_btnsubmit').removeData('edit-id').text('Submit');
+        secrel_toggleConfigurationFields();
         secrel_BindOtherCosting();
         return false;
     }

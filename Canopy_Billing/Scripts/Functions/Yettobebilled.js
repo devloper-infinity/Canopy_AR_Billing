@@ -7,6 +7,7 @@ function rlInvoiceActions(row, allowSend) {
     if (row.FilePath) actions += '<a title="Download File" href="DownloadFile.ashx?file=' + encodeURIComponent(row.FilePath) + '"><i class="fa fa-download action-icon"></i></a> ';
     actions += '<a title="History" href="#" onclick="return showRlInvoiceHistory(' + row.InvoiceID + ');"><i class="fa fa-history action-icon"></i></a> ';
     actions += '<a title="View Invoice" target="_blank" href="RLInvoicePdf.ashx?id=' + row.InvoiceID + '"><i class="fa fa-file-pdf action-icon"></i></a> ';
+    actions += '<a title="Download Excel Invoice" href="RLInvoiceExcel.ashx?id=' + row.InvoiceID + '"><i class="fa fa-file-excel action-icon" style="color:#15803d"></i></a> ';
     if (allowSend) actions += '<a title="Send To Client" href="#" onclick="return sendRlInvoiceToClient(' + row.InvoiceID + ');"><i class="fa fa-paper-plane action-icon"></i></a>';
     return actions;
 }
@@ -16,9 +17,20 @@ function bindRlInvoicesToBill() {
         destroy: true, scrollX: true,
         ajax: { url: 'Yettobebilled.aspx/GetRlInvoices', type: 'POST', contentType: 'application/json; charset=utf-8', dataSrc: function (r) { return JSON.parse(r.d); } },
         columns: [
-            { data: null, orderable: false, render: function (d, t, row) { return rlInvoiceActions(row, true); } },
-            { data: 'OurClient' }, { data: 'Recipient' }, { data: 'TradeName' }, { data: 'InvoiceDate' },
-            { data: 'Document' }, { data: 'LoanCount' }, { data: 'Cost' }, { data: 'ExpectedBilling' }, { data: 'BillingEntity' }
+            {
+                data: null, orderable: false, render: function (d, t, row)
+                { return rlInvoiceActions(row, true); }
+            },
+            { data: 'BillingEntity' },
+            { data: 'TradeName' },
+            { data: 'InvoiceDate' },
+            { data: 'LoanCount' },
+            { data: 'Cost' },
+            { data: 'ExpectedBilling' },
+            { data: 'OurClient' },
+            { data: 'Recipient' },
+            { data: 'Document' }
+        
         ]
     });
     return false;
@@ -71,9 +83,17 @@ function bindSentRlInvoices() {
         destroy: true, scrollX: true,
         ajax: { url: 'SentToClient.aspx/GetSentRlInvoices', type: 'POST', contentType: 'application/json; charset=utf-8', dataSrc: function (r) { return JSON.parse(r.d); } },
         columns: [
-            { data: null, orderable: false, render: function (d, t, row) { return '<a title="View Invoice" target="_blank" href="RLInvoicePdf.ashx?id=' + row.InvoiceID + '"><i class="fa fa-file-pdf action-icon"></i></a>'; } },
-            { data: 'OurClient' }, { data: 'Recipient' }, { data: 'TradeName' }, { data: 'InvoiceDate' }, { data: 'Document' },
-            { data: 'LoanCount' }, { data: 'ExpectedBilling' }, { data: 'BillingEntity' }, { data: 'SentDateTime' }
+            { data: null, orderable: false, render: function (d, t, row) { return '<a title="View Invoice" target="_blank" href="RLInvoicePdf.ashx?id=' + row.InvoiceID + '"><i class="fa fa-file-pdf action-icon"></i></a> <a title="Download Excel Invoice" href="RLInvoiceExcel.ashx?id=' + row.InvoiceID + '"><i class="fa fa-file-excel action-icon" style="color:#15803d"></i></a>'; } },
+            { data: 'BillingEntity' },
+            { data: 'TradeName' },
+            { data: 'InvoiceDate' },
+            { data: 'LoanCount' },
+            { data: 'ExpectedBilling' },
+            { data: 'OurClient' },
+            { data: 'Recipient' },
+            { data: 'Document' },
+          
+            { data: 'SentDateTime' }
         ]
     });
     return false;
