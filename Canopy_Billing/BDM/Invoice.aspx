@@ -846,6 +846,7 @@
                                                     <option value="">Select</option>
                                                     <option value="Reliance Letter">Reliance Letter</option>
                                                     <option value="Securitization">Securitization</option>
+                                                    <option value="Both">Both</option>
                                                 </select>
                                             </div>
                                             <div class="erp-field">
@@ -880,18 +881,12 @@
                                                 <label>Billing Entity</label>
                                                 <select id="rladdinvoice_billingentity" name="rladdinvoice_billingentity" class="form-control" onchange="rladdinvoice_getRLSecRate();"></select>
                                             </div>
-                                            <div class="erp-field" id="rladdinvoice_loancount_field">
-                                                <label id="rladdinvoice_loancount_label">Loan Count</label>
-                                                <input type="number" id="rmaddinvoice_loancount" name="rmaddinvoice_loancount" class="form-control" onchange="getexpectedamount();" />
-                                            </div>
-                                            <div class="erp-field" id="rladdinvoice_cost_field">
-                                                <label id="rladdinvoice_cost_label">Cost</label>
-                                                <input type="text" id="rladdinvoice_cost" name="rladdinvoice_cost" class="form-control" onchange="getexpectedamount();" />
-                                            </div>
                                             <div id="rladdinvoice_flexible_costing" class="invoice-costing-card" style="display:none;">
                                                 <div class="invoice-costing-grid">
                                                     <div class="erp-field"><label>Billing Method</label><select id="rladdinvoice_billingmethod" class="form-control" onchange="rladdinvoice_manualMethodChanged();"><option value="">Select</option><option value="PerFile">Per File</option><option value="Hourly">Hourly</option></select></div>
+                                                    <div class="erp-field" id="rladdinvoice_loancount_field"><label id="rladdinvoice_loancount_label">File Count</label><input type="number" id="rmaddinvoice_loancount" name="rmaddinvoice_loancount" class="form-control" onchange="getexpectedamount();" /></div>
                                                     <div class="erp-field" id="rladdinvoice_hours_field" style="display:none;"><label>Hours Worked</label><input type="number" min="0" step="0.01" id="rladdinvoice_hoursworked" class="form-control" oninput="getexpectedamount();" /></div>
+                                                    <div class="erp-field" id="rladdinvoice_cost_field"><label id="rladdinvoice_cost_label">Rate / File</label><input type="number" min="0" step="0.01" id="rladdinvoice_cost" name="rladdinvoice_cost" class="form-control" oninput="getexpectedamount();" /></div>
                                                     <div class="erp-field"><label>Minimum Billing</label><input id="rladdinvoice_minimum" type="number" min="0" step="0.01" class="form-control" oninput="getexpectedamount();" /></div>
                                                     <div class="erp-field"><label>Maximum Cap</label><input id="rladdinvoice_cap" type="number" min="0" step="0.01" class="form-control" oninput="getexpectedamount();" /></div>
                                                 </div>
@@ -980,9 +975,11 @@
                                                         <th>Billing Entity</th>
                                                         <th>Trade Name</th>
                                                         <th>Invoice Date</th>
-                                                        <th>Loan Count</th>
+                                                        <th>RL Count</th>
+                                                        <th>RL Rate</th>
+                                                        <th>Sec Files/Hours</th>
+                                                        <th>Sec Rate</th>
                                                         <th>Expected Billing</th>
-                                                        <th>Cost</th>
 
                                                         <th>Recipient</th>
                                                         <th>Our Client</th>
@@ -1016,6 +1013,7 @@
                                                     <input type="file" id="rlinvoice_attachment" name="rlinvoice_attachment" class="form-control" />
                                                 </div>
                                                 <button id="rlinvocie_btnvalidate" type="button" name="rlinvocie_btnvalidate" class="btn btn-primary" onclick="return rlinvoice_uploadExcel();">Validate</button>
+                                                <a href="RLInvoiceImportTemplate.ashx" class="btn btn-secondary"><i class="fas fa-download"></i>&nbsp; Download Template</a>
                                             </div>
                                         </div>
 

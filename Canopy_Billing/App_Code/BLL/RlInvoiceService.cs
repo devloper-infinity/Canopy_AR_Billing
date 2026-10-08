@@ -37,7 +37,61 @@ namespace Vendor_Portal.App_Code.BLL
                 cmd.Parameters.Add("@IsSent", SqlDbType.Bit).Value = sent;
                 DataTable table = new DataTable();
                 da.Fill(table);
+                AddBillingBreakdown(table);
                 return table;
+            }
+        }
+
+        private static void AddBillingBreakdown(DataTable table)
+        {
+            table.Columns.Add("RLCount", typeof(decimal));
+            table.Columns.Add("RLRate", typeof(decimal));
+            table.Columns.Add("SecQuantity", typeof(decimal));
+            table.Columns.Add("SecQuantityType", typeof(string));
+            table.Columns.Add("SecRate", typeof(decimal));
+            Dictionary<int, DataRow> details = new Dictionary<int, DataRow>();
+            using (SqlConnection con = new SqlConnection(SQLHelper.ConnectionString2))
+            using (SqlCommand cmd = new SqlCommand("SELECT InvoiceID,SUM(Quantity) RLCount,MAX(Rate) RLRate FROM RLInvoiceCostingDetail GROUP BY InvoiceID", con))
+            using (SqlDataAdapter da = new SqlDataAdapter(cmd))
+            {
+                DataTable values = new DataTable(); da.Fill(values);
+                foreach (DataRow row in values.Rows) details[Convert.ToInt32(row["InvoiceID"])] = row;
+            }
+            foreach (DataRow row in table.Rows)
+            {
+                string document = Convert.ToString(row["Document"]), method = Convert.ToString(row["BillingMethod"]);
+                DataRow detail;
+                if ((document == "Reliance Letter" || document == "Both") && details.TryGetValue(Convert.ToInt32(row["InvoiceID"]), out detail))
+                { row["RLCount"] = detail["RLCount"]; row["RLRate"] = detail["RLRate"]; }
+                else if (document == "Reliance Letter")
+                { row["RLCount"] = ToDecimalValue(row["LoanCount"]); row["RLRate"] = ToDecimalValue(row["Cost"]); }
+                if (document == "Securitization" || document == "Both")
+                {
+                    row["SecQuantity"] = method == "Hourly" ? ToDecimalValue(row["HoursWorked"]) : ToDecimalValue(row["LoanCount"]);
+                    row["SecQuantityType"] = method == "Hourly" ? "Hours" : "Files";
+                    row["SecRate"] = ToDecimalValue(row["Cost"]);
+                }
+            }
+        }
+
+        private static decimal ToDecimalValue(object value)
+        { decimal number; return decimal.TryParse(Convert.ToString(value), NumberStyles.Any, CultureInfo.InvariantCulture, out number) ? number : 0m; }
+
+        public static DataTable GetLoanMetadata(IEnumerable<string> loanIds)
+        {
+            List<string> ids = loanIds.Where(value => !string.IsNullOrWhiteSpace(value)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            DataTable table = new DataTable();
+            if (ids.Count == 0) return table;
+            using (SqlConnection con = new SqlConnection(SQLHelper.ConnectionString))
+            using (SqlCommand cmd = con.CreateCommand())
+            using (SqlDataAdapter da = new SqlDataAdapter(cmd))
+            {
+                List<string> parameters = new List<string>();
+                for (int index = 0; index < ids.Count; index++) { string name = "@Loan" + index; parameters.Add(name); cmd.Parameters.Add(name, SqlDbType.NVarChar, 100).Value = ids[index]; }
+                cmd.CommandText = @"SELECT CONVERT(nvarchar(100),lr.loanid) loanid,lt.transactionIdentifier,lr.createdDate,lr.snapShotTakenDate
+                                    FROM LoanRecord lr LEFT JOIN LoanTransactions lt ON lt.id=lr.transactionID
+                                    WHERE CONVERT(nvarchar(100),lr.loanid) IN (" + string.Join(",", parameters) + ")";
+                da.Fill(table); return table;
             }
         }
 
@@ -163,9 +217,21 @@ namespace Vendor_Portal.App_Code.BLL
             int lineY = 474;
             if (costingDetails.Rows.Count > 0)
             {
+                if (string.Equals(activity.Trim(), "Both", StringComparison.OrdinalIgnoreCase))
+                {
+                    decimal rlTotal = costingDetails.AsEnumerable().Sum(item => Convert.ToDecimal(item["Amount"]));
+                    decimal secAmount = amount - rlTotal;
+                    string secQuantity = billingMethod == "Hourly" ? Convert.ToString(row["HoursWorked"]) : Convert.ToString(row["LoanCount"]);
+                    Text(content, 125, lineY, 8, "Securitization");
+                    Text(content, 240, lineY, 8, billingMethod == "Hourly" ? "Securitization Services - Hourly" : "Securitization Services - Per File");
+                    Text(content, 438, lineY, 8, secQuantity);
+                    Text(content, 482, lineY, 8, rate.ToString("N2", CultureInfo.InvariantCulture));
+                    Text(content, 535, lineY, 8, secAmount.ToString("N2", CultureInfo.InvariantCulture));
+                    lineY -= 24;
+                }
                 foreach (DataRow detail in costingDetails.Rows)
                 {
-                    Text(content, 125, lineY, 8, activity);
+                    Text(content, 125, lineY, 8, string.Equals(activity.Trim(), "Both", StringComparison.OrdinalIgnoreCase) ? "Reliance Letter" : activity);
                     string[] descriptionLines = Wrap(Convert.ToString(detail["BillingDescription"]), 34).ToArray();
                     Text(content, 240, lineY, 8, descriptionLines.FirstOrDefault() ?? string.Empty);
                     Text(content, 438, lineY, 8, Convert.ToDecimal(detail["Quantity"]).ToString("N2", CultureInfo.InvariantCulture));
@@ -211,8 +277,22 @@ namespace Vendor_Portal.App_Code.BLL
         {
             using (SqlConnection con = new SqlConnection(SQLHelper.ConnectionString2))
             using (SqlCommand cmd = new SqlCommand(@"
-                SELECT BillingDescription, Quantity, Rate, Amount
-                FROM dbo.RLInvoiceCostingDetail WHERE InvoiceID=@InvoiceID ORDER BY InvoiceDetailID", con))
+                IF EXISTS (SELECT 1 FROM dbo.RLInvoiceCostingDetail WHERE InvoiceID=@InvoiceID)
+                BEGIN
+                    SELECT BillingDescription, Quantity, Rate, Amount
+                    FROM dbo.RLInvoiceCostingDetail WHERE InvoiceID=@InvoiceID ORDER BY InvoiceDetailID;
+                END
+                ELSE
+                BEGIN
+                    SELECT TOP 1 d.ProductType AS BillingDescription,
+                           TRY_CONVERT(decimal(18,2),r.LoanCount) AS Quantity,
+                           CASE WHEN ISNULL(r.Cost,0)>0 THEN r.Cost ELSE d.Rate END AS Rate,
+                           r.ExpectedBilling AS Amount
+                    FROM dbo.RLinvoice r
+                    INNER JOIN dbo.SecuritizationRelianceLetterCostingDetail d ON d.RateID=r.CostingRateID AND d.IsActive=1
+                    WHERE r.InvoiceID=@InvoiceID AND LTRIM(RTRIM(r.Document))='Reliance Letter'
+                    ORDER BY CASE WHEN d.Rate=r.Cost THEN 0 ELSE 1 END,d.CostingDetailID;
+                END", con))
             using (SqlDataAdapter da = new SqlDataAdapter(cmd))
             {
                 cmd.Parameters.Add("@InvoiceID", SqlDbType.Int).Value = invoiceId;

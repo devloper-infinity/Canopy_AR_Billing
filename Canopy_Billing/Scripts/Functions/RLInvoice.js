@@ -23,6 +23,7 @@ function canopyModalFire(options) {
 window.Swal = { fire: canopyModalFire };
 
 let rladdinvoice_currentCosting = null;
+let rladdinvoice_rlCosting = null;
 let rladdinvoice_pendingEdit = null;
 
 function rlinvoice_bindBillingTable1() {
@@ -61,6 +62,10 @@ function rlinvoice_bindBillingTable1() {
 }
 
 function rlinvoice_uploadExcel() {
+    if (!$('#rlinvoice_attachment').val()) {
+        Swal.fire({ icon: 'warning', title: 'Import file required', text: 'Select the completed Excel template first.' });
+        return false;
+    }
     $("#load1").show();
     $.ajax({
         url: "Invoice.aspx/BulkImport",
@@ -221,7 +226,7 @@ function rladdinvoice_submit() {
         return false;
     }
     const invoiceMethod = rladdinvoice_currentCosting ? (rladdinvoice_currentCosting.BillingMethod || $('#rladdinvoice_billingmethod').val()) : $('#rladdinvoice_billingmethod').val();
-    if (documentType === 'Securitization' && !invoiceMethod) {
+    if ((documentType === 'Securitization' || documentType === 'Both') && !invoiceMethod) {
         Swal.fire({ icon: 'warning', title: 'Billing Method', text: 'Select Per File or Hourly.' });
         return false;
     }
@@ -239,7 +244,7 @@ function rladdinvoice_submit() {
     }
     var data = {
         //InvoiceID: $('#hdnInvoiceID').val(),
-        InvoiceID: isEdit ? $('#hdnInvoiceID').val() : 0,
+        InvoiceID: isEdit ? Number($('#hdnInvoiceID').val() || 0) : 0,
         OurClient: $('#rladdinvoice_ourclient').val(),
         Recipient: $('#rladdinvoice_recipient').val(),
         TradeName: $('#rladdinvoice_tradename').val(),
@@ -252,9 +257,9 @@ function rladdinvoice_submit() {
         BillingEntity: $('#rladdinvoice_billingentity option:selected').text(),
         ProjectID: Number($('#rladdinvoice_billingentity').val() || 0),
         EmailConfiguration: rladdinvoice_getConfiguredEmails().join(','),
-        LoanCount: $('#rmaddinvoice_loancount').val(),
-        RLCost: $('#rladdinvoice_cost').val(),
-        ExpectedBilling: $('#rladdinvoice_expectedbilling').val(),
+        LoanCount: Number($('#rmaddinvoice_loancount').val() || 0),
+        RLCost: Number($('#rladdinvoice_cost').val() || 0),
+        ExpectedBilling: Number($('#rladdinvoice_expectedbilling').val() || 0),
         Notes: $('#rladdinvoice_notes').val(),
         CostingRateID: rladdinvoice_currentCosting ? Number(rladdinvoice_currentCosting.RateID) : 0,
         BillingMethod: invoiceMethod,
@@ -348,6 +353,7 @@ function clearForm() {
     $('#rladdinvoice_cost_label').text('Cost');
     $('#rladdinvoice_cost').prop('readonly', false);
     rladdinvoice_currentCosting = null;
+    rladdinvoice_rlCosting = null;
 }
 
 function rladdinvoice_bindBillingTable() {
@@ -424,9 +430,11 @@ function rladdinvoice_bindBillingTable() {
             { data: "BillingEntity" },
             { data: "TradeName" },
             { data: "InvoiceDate" },
-            { data: "LoanCount" },
+            { data: "RLCount", defaultContent: "" },
+            { data: "RLRate", defaultContent: "" },
+            { data: null, render: function (d, t, row) { return row.SecQuantity ? row.SecQuantity + ' ' + row.SecQuantityType : ''; } },
+            { data: "SecRate", defaultContent: "" },
             { data: "ExpectedBilling" },
-            { data: "RLCost" },
             { data: "Recipient" },
 
             { data: "OurClient" },
@@ -719,6 +727,7 @@ function rladdinvoice_getRLSecRate(emailConfiguration) {
 
 function rladdinvoice_resetCostingUI() {
     rladdinvoice_currentCosting = null;
+    rladdinvoice_rlCosting = null;
     $('#rladdinvoice_flexible_costing, #rladdinvoice_product_costing').hide();
     $('#rladdinvoice_product_rows').empty();
     $('#rladdinvoice_loancount_field, #rladdinvoice_cost_field').show();
@@ -737,6 +746,39 @@ function rladdinvoice_loadCostingConfiguration() {
     const invoiceDate = $('#rladdinvoice_invoicedate').val();
     rladdinvoice_resetCostingUI();
     if (!projectId || !documentType) return;
+
+    if (documentType === 'Both') {
+        $.when(
+            $.ajax({ type: 'POST', url: 'Invoice.aspx/GetFlexibleCosting', contentType: 'application/json; charset=utf-8', data: JSON.stringify({ projectId: projectId, documentType: 'Securitization', invoiceDate: invoiceDate }) }),
+            $.ajax({ type: 'POST', url: 'Invoice.aspx/GetFlexibleCosting', contentType: 'application/json; charset=utf-8', data: JSON.stringify({ projectId: projectId, documentType: 'Reliance Letter', invoiceDate: invoiceDate }) })
+        ).done(function (secResponse, rlResponse) {
+            const sec = secResponse[0].d || {}, rl = rlResponse[0].d || {}, pending = rladdinvoice_pendingEdit;
+            rladdinvoice_currentCosting = sec.Header || null;
+            rladdinvoice_rlCosting = rl.Header || null;
+            const method = sec.Header ? (sec.Header.BillingMethod || '') : '';
+            const hourly = method === 'Hourly';
+            $('#rladdinvoice_flexible_costing, #rladdinvoice_product_costing').show();
+            $('#rladdinvoice_billingmethod').prop('disabled', !!method).val(method);
+            $('#rladdinvoice_hours_field').toggle(hourly);
+            $('#rladdinvoice_loancount_field').toggle(!hourly);
+            $('#rladdinvoice_loancount_label').text('Securitization File Count');
+            $('#rladdinvoice_cost_label').text(hourly ? 'Hourly Rate' : 'Rate / File');
+            $('#rladdinvoice_cost').val(sec.Header ? (sec.Header.Rate || 0) : 0).prop('readonly', false).attr('data-master-rate', Number(sec.Header ? sec.Header.Rate || 0 : 0));
+            $('#rladdinvoice_minimum').val(sec.Header ? sec.Header.MinimumAmount || 0 : 0).attr('data-master-value', Number(sec.Header ? sec.Header.MinimumAmount || 0 : 0));
+            $('#rladdinvoice_cap').val(sec.Header ? sec.Header.MaximumCap || 0 : 0).attr('data-master-value', Number(sec.Header ? sec.Header.MaximumCap || 0 : 0));
+            $('#rladdinvoice_minimum').closest('.erp-field').toggle(method === 'PerFile');
+            $('#rladdinvoice_cap').closest('.erp-field').toggle(!!method);
+            if (pending) $('#rladdinvoice_hoursworked').val(pending.HoursWorked || '');
+            const saved = pending && pending.ProductDetails ? pending.ProductDetails : [];
+            (rl.Details || []).forEach(function (detail) { const prior = saved.find(function (item) { return Number(item.CostingDetailID) === Number(detail.CostingDetailID); }) || {}; rladdinvoice_addInvoiceProductRow(detail, prior); });
+            if (!rl.Details || !rl.Details.length) rladdinvoice_addManualProductRow(rl.Header ? rl.Header.Rate : 0);
+            if (rl.Details && rl.Details.length > 1 && saved.length === 0) $('#rladdinvoice_product_rows .scope-select').prop('checked', false);
+            if (!method) rladdinvoice_manualMethodChanged();
+            rladdinvoice_refreshDeleteButtons(); getexpectedamount(); rladdinvoice_pendingEdit = null;
+            if (!sec.Header || !rl.Header) Swal.fire({ icon: 'info', title: 'Rate not configured', text: 'Enter missing rates. They will be saved in costing configuration.' });
+        });
+        return;
+    }
 
     $.ajax({
         type: 'POST', url: 'Invoice.aspx/GetFlexibleCosting', contentType: 'application/json; charset=utf-8',
@@ -774,6 +816,8 @@ function rladdinvoice_loadCostingConfiguration() {
                 $('#rladdinvoice_cost').prop('readonly', false).attr('data-master-rate', Number(header.Rate || 0));
                 $('#rladdinvoice_minimum').val(header.MinimumAmount || 0).attr('data-master-value', Number(header.MinimumAmount || 0));
                 $('#rladdinvoice_cap').val(header.MaximumCap || 0).attr('data-master-value', Number(header.MaximumCap || 0));
+                $('#rladdinvoice_minimum').closest('.erp-field').toggle(configuredMethod === 'PerFile');
+                $('#rladdinvoice_cap').closest('.erp-field').toggle(!!configuredMethod);
                 if (pending) $('#rladdinvoice_hoursworked').val(pending.HoursWorked || '');
                 if (!configuredMethod) rladdinvoice_manualMethodChanged();
             } else if (documentType === 'Reliance Letter') {
@@ -824,11 +868,15 @@ function rladdinvoice_collectProductDetails() {
 function rladdinvoice_manualMethodChanged() {
     const method = $('#rladdinvoice_billingmethod').val();
     const hourly = method === 'Hourly';
+    const perFile = method === 'PerFile';
+    const selected = hourly || perFile;
     $('#rladdinvoice_hours_field').toggle(hourly);
-    $('#rladdinvoice_loancount_field').toggle(!hourly);
+    $('#rladdinvoice_loancount_field').toggle(perFile);
+    $('#rladdinvoice_cost_field').toggle(selected);
     $('#rladdinvoice_loancount_label').text('File Count');
     $('#rladdinvoice_cost_label').text(hourly ? 'Hourly Rate' : 'Rate / File');
-    $('#rladdinvoice_minimum').closest('.erp-field').toggle(method === 'PerFile');
+    $('#rladdinvoice_minimum').closest('.erp-field').toggle(perFile);
+    $('#rladdinvoice_cap').closest('.erp-field').toggle(selected);
     getexpectedamount();
 }
 
@@ -852,12 +900,13 @@ $(document).on('input', '.invoice-manual-rate', function () { $(this).closest('t
 $(document).on('change', '.scope-select', function () { rladdinvoice_updateScopeSelection(); getexpectedamount(); });
 
 function rladdinvoice_hasMasterRateChanges() {
-    if (!rladdinvoice_currentCosting) return false;
-    if ($('#rladdinvoice_document').val() === 'Securitization')
-        return Number($('#rladdinvoice_cost').val() || 0) !== Number($('#rladdinvoice_cost').attr('data-master-rate') || 0)
+    const type = $('#rladdinvoice_document').val();
+    if (!rladdinvoice_currentCosting && !rladdinvoice_rlCosting) return false;
+    let changed = false;
+    if (type === 'Securitization' || type === 'Both')
+        changed = Number($('#rladdinvoice_cost').val() || 0) !== Number($('#rladdinvoice_cost').attr('data-master-rate') || 0)
             || Number($('#rladdinvoice_minimum').val() || 0) !== Number($('#rladdinvoice_minimum').attr('data-master-value') || 0)
             || Number($('#rladdinvoice_cap').val() || 0) !== Number($('#rladdinvoice_cap').attr('data-master-value') || 0);
-    let changed = false;
     $('#rladdinvoice_product_rows tr').each(function () {
         if (Number($(this).attr('data-detail-id') || 0) > 0 && Number($(this).attr('data-rate') || 0) !== Number($(this).attr('data-master-rate') || 0)) changed = true;
     });
@@ -1150,24 +1199,26 @@ function setBillingEntityByText(text, emailConfiguration) {
 }
 
 function getexpectedamount() {
-    let amount = 0;
+    let amount = 0, rlAmount = 0, secAmount = 0;
     if ($('#rladdinvoice_product_costing').is(':visible')) {
         $('#rladdinvoice_product_rows tr').has('.scope-select:checked').each(function () {
             const row = $(this), line = Number(row.find('.invoice-product-quantity').val() || 0) * Number(row.attr('data-rate') || 0);
             row.find('.invoice-product-amount').text(line.toFixed(2));
-            amount += line;
+            rlAmount += line;
         });
-    } else {
+    }
+    if ($('#rladdinvoice_flexible_costing').is(':visible')) {
         const rate = Number($('#rladdinvoice_cost').val() || 0);
         const method = rladdinvoice_currentCosting ? rladdinvoice_currentCosting.BillingMethod : $('#rladdinvoice_billingmethod').val();
         const quantity = method === 'Hourly' ? Number($('#rladdinvoice_hoursworked').val() || 0) : Number($('#rmaddinvoice_loancount').val() || 0);
         const base = quantity * rate, minimum = Number($('#rladdinvoice_minimum').val() || 0), cap = Number($('#rladdinvoice_cap').val() || 0);
-        amount = base;
+        secAmount = base;
         const adjustments = [];
-        if (method === 'PerFile' && minimum > 0 && amount < minimum) { amount = minimum; adjustments.push('Minimum billing applied'); }
-        if (cap > 0 && amount > cap) { amount = cap; adjustments.push('Maximum cap applied'); }
+        if (method === 'PerFile' && minimum > 0 && secAmount < minimum) { secAmount = minimum; adjustments.push('Minimum billing applied'); }
+        if (cap > 0 && secAmount > cap) { secAmount = cap; adjustments.push('Maximum cap applied'); }
         $('#rladdinvoice_adjustment').text(adjustments.join(' • '));
     }
+    amount = rlAmount + secAmount;
     $('#rladdinvoice_expectedbilling').val(amount.toFixed(2));
 }
 

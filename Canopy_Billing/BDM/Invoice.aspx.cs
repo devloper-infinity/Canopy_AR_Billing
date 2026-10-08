@@ -46,6 +46,7 @@ namespace Vendor_Portal.BDM
                 objfilestream.Write(binaryWriteArray, 0,
                 binaryWriteArray.Length);
                 objfilestream.Close();
+                Session["RLInvoiceImportFile"] = NewFileName;
             }
             catch { }
         }
@@ -73,8 +74,14 @@ namespace Vendor_Portal.BDM
                         ExpectedBilling,
                         BillingEntity, ContactPerson, SubmittedForInvoice, InvoiceIssued, Notes,FilePath, isVerify, VerifyRemark, VerifiedOn,
                         CostingRateID, BillingMethod, HoursWorked, MinimumAmount, MaximumCap, BaseAmount,
-                        MinimumApplied, CapApplied
-                        FROM RLinvoice";
+                        MinimumApplied, CapApplied,
+                        CASE WHEN Document IN ('Reliance Letter','Both') THEN ISNULL(detail.RLCount,CASE WHEN Document='Reliance Letter' THEN TRY_CONVERT(decimal(18,2),LoanCount) END) END RLCount,
+                        CASE WHEN Document IN ('Reliance Letter','Both') THEN ISNULL(detail.RLRate,CASE WHEN Document='Reliance Letter' THEN Cost END) END RLRate,
+                        CASE WHEN Document IN ('Securitization','Both') THEN CASE WHEN BillingMethod='Hourly' THEN HoursWorked ELSE TRY_CONVERT(decimal(18,2),LoanCount) END END SecQuantity,
+                        CASE WHEN Document IN ('Securitization','Both') THEN CASE WHEN BillingMethod='Hourly' THEN 'Hours' ELSE 'Files' END END SecQuantityType,
+                        CASE WHEN Document IN ('Securitization','Both') THEN Cost END SecRate
+                        FROM RLinvoice r
+                        OUTER APPLY (SELECT SUM(Quantity) RLCount,MAX(Rate) RLRate FROM RLInvoiceCostingDetail d WHERE d.InvoiceID=r.InvoiceID) detail";
 
                 using (SqlCommand cmd = new SqlCommand(query, con))
                 {
@@ -115,6 +122,11 @@ namespace Vendor_Portal.BDM
                             ,BaseAmount = dr["BaseAmount"].ToString()
                             ,MinimumApplied = dr["MinimumApplied"] != DBNull.Value && Convert.ToBoolean(dr["MinimumApplied"])
                             ,CapApplied = dr["CapApplied"] != DBNull.Value && Convert.ToBoolean(dr["CapApplied"])
+                            ,RLCount = dr["RLCount"].ToString()
+                            ,RLRate = dr["RLRate"].ToString()
+                            ,SecQuantity = dr["SecQuantity"].ToString()
+                            ,SecQuantityType = dr["SecQuantityType"].ToString()
+                            ,SecRate = dr["SecRate"].ToString()
                             ,ProductDetails = GetInvoiceCostingDetails(Convert.ToInt32(dr["InvoiceID"]))
                         }); ;
                     }
@@ -143,8 +155,8 @@ namespace Vendor_Portal.BDM
                     }
                     else
                     {
-                        //dt.Rows.Add(row.Cells().Select(c => c.Value).ToArray());
-                        dt.Rows.Add(row.Cells().Select(c => c.GetValue<string>() ?? "").ToArray());
+                        string[] values = row.Cells().Select(c => c.GetValue<string>() ?? "").ToArray();
+                        if (values.Any(value => !string.IsNullOrWhiteSpace(value))) dt.Rows.Add(values);
                     }
                 }
             }
@@ -217,29 +229,190 @@ namespace Vendor_Portal.BDM
                 }
             }
         }
-        [WebMethod]
+        [WebMethod(EnableSession = true)]
         public static object BulkImport()
         {
-            DataTable dt = ReadExcelFile(NewFileName);
+            ImportResult result = new ImportResult { Summary = new ImportSummary(), Duplicates = new List<object>(), Errors = new List<object>(), Inserted = new List<object>() };
+            string importFile = Convert.ToString(HttpContext.Current.Session["RLInvoiceImportFile"]);
+            if (string.IsNullOrWhiteSpace(importFile) || !File.Exists(importFile))
+                throw new InvalidOperationException("Select an Excel import file first.");
 
-            // Clean data (important)
-            //dt.Columns["Our Client"].ColumnName = "OurClient";
-            //dt.Columns["Trade Name"].ColumnName = "TradeName";
-            //dt.Columns["Invoice Date"].ColumnName = "InvoiceDate";
-            //dt.Columns["Billing Entity"].ColumnName = "BillingEntity";
-            foreach (DataColumn col in dt.Columns)
+            DataTable table = ReadExcelFile(importFile);
+            string[] required = { "OurClient", "TradeName", "InvoiceDate", "DocumentType", "BillingEntity" };
+            foreach (DataColumn column in table.Columns) column.ColumnName = NormalizeImportHeader(column.ColumnName);
+            string missing = string.Join(", ", required.Where(name => !table.Columns.Contains(name)));
+            if (missing.Length > 0) throw new InvalidOperationException("Missing template columns: " + missing + ".");
+
+            result.Summary.Total = table.Rows.Count;
+            foreach (DataRow row in table.Rows)
             {
-                col.ColumnName = col.ColumnName.Replace(" ", "").Trim();
+                string ourClient = ImportValue(row, "OurClient"), tradeName = ImportValue(row, "TradeName");
+                string billingEntity = ImportValue(row, "BillingEntity"), invoiceDate = ImportValue(row, "InvoiceDate");
+                try
+                {
+                    invoiceDate = ImportDate(row, "InvoiceDate", true);
+                    InvoiceModel model = BuildImportModel(row, invoiceDate);
+                    using (SqlConnection con = new SqlConnection(SQLHelper.ConnectionString2))
+                    {
+                        con.Open();
+                        using (SqlTransaction transaction = con.BeginTransaction())
+                        {
+                            ResolveImportCosting(con, transaction, model);
+                            if (ImportDuplicateExists(con, transaction, model))
+                            {
+                                transaction.Rollback();
+                                result.Duplicates.Add(new { OurClient = ourClient, TradeName = tradeName, InvoiceDate = invoiceDate, BillingEntity = billingEntity });
+                                result.Summary.Duplicate++;
+                                continue;
+                            }
+
+                            ApplyCostingRules(con, transaction, model);
+                            using (SqlCommand cmd = new SqlCommand(@"
+                                INSERT RLinvoice
+                                (OurClient,Recipient,TradeName,InvoiceDate,Document,TM,DocuSign,DocumentDate,ExecutedDate,
+                                 BillingEntity,ContactPerson,LoanCount,Cost,ExpectedBilling,Notes,CostingRateID,BillingMethod,
+                                 HoursWorked,MinimumAmount,MaximumCap,BaseAmount,MinimumApplied,CapApplied,AddedBy)
+                                OUTPUT INSERTED.InvoiceID
+                                VALUES
+                                (@OurClient,@Recipient,@TradeName,@InvoiceDate,@Document,@TM,@DocuSign,@DocumentDate,@ExecutedDate,
+                                 @BillingEntity,@ContactPerson,@LoanCount,@Cost,@ExpectedBilling,@Notes,@CostingRateID,@BillingMethod,
+                                 @HoursWorked,@MinimumAmount,@MaximumCap,@BaseAmount,@MinimumApplied,@CapApplied,@AddedBy)", con, transaction))
+                            {
+                                AddInvoiceParameters(cmd, model);
+                                int invoiceId = Convert.ToInt32(cmd.ExecuteScalar());
+                                SaveInvoiceDetails(con, transaction, invoiceId, model.ProductDetails);
+                            }
+                            transaction.Commit();
+                        }
+                    }
+                    result.Inserted.Add(new { OurClient = ourClient, TradeName = tradeName, InvoiceDate = invoiceDate, BillingEntity = billingEntity });
+                    result.Summary.Inserted++;
+                }
+                catch (Exception ex)
+                {
+                    result.Errors.Add(new { OurClient = ourClient, TradeName = tradeName, InvoiceDate = invoiceDate, BillingEntity = billingEntity, TM = ImportValue(row, "TM"), ErrorMessage = ex.Message });
+                    result.Summary.Error++;
+                }
             }
-            if (!dt.Columns.Contains("AddedBy"))
+            return result;
+        }
+
+        private static InvoiceModel BuildImportModel(DataRow row, string invoiceDate)
+        {
+            string document = ImportValue(row, "DocumentType");
+            if (!document.Equals("Reliance Letter", StringComparison.OrdinalIgnoreCase) && !document.Equals("Securitization", StringComparison.OrdinalIgnoreCase) && !document.Equals("Both", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Document Type must be Reliance Letter, Securitization or Both.");
+            if (string.IsNullOrWhiteSpace(ImportValue(row, "OurClient")) || string.IsNullOrWhiteSpace(ImportValue(row, "BillingEntity")) || string.IsNullOrWhiteSpace(ImportValue(row, "TradeName")))
+                throw new InvalidOperationException("Our Client, Billing Entity and Trade Name are required.");
+
+            InvoiceModel model = new InvoiceModel
             {
-                dt.Columns.Add("AddedBy", typeof(int));
-                dt.Columns["AddedBy"].DefaultValue = int.Parse(HttpContext.Current.User.Identity.Name.ToString());
+                OurClient = ImportValue(row, "OurClient"), Recipient = ImportValue(row, "Recipient"), TradeName = ImportValue(row, "TradeName"),
+                InvoiceDate = invoiceDate, Document = document.Equals("Securitization", StringComparison.OrdinalIgnoreCase) ? "Securitization" : document.Equals("Both", StringComparison.OrdinalIgnoreCase) ? "Both" : "Reliance Letter",
+                TM = ImportValue(row, "TM"), DocSign = ImportValue(row, "DocumentSigned"), DocumentDate = ImportDate(row, "DocumentDate", false),
+                ExecutedDate = ImportDate(row, "ExecutedDate", false), BillingEntity = ImportValue(row, "BillingEntity"),
+                EmailConfiguration = ImportValue(row, "EmailConfiguration"), Notes = ImportValue(row, "Notes"),
+                LoanCount = ImportInt(row, "LoanCount"), HoursWorked = ImportDecimal(row, "HoursWorked"), RLCost = ImportDecimal(row, "Rate"),
+                MinimumAmount = ImportDecimal(row, "MinimumBilling"), MaximumCap = ImportDecimal(row, "MaximumCap"),
+                BillingMethod = NormalizeBillingMethod(ImportValue(row, "BillingMethod")), UpdateMasterRates = false,
+                ProductDetails = new List<InvoiceCostingDetailModel>()
+            };
+            if (model.Document == "Reliance Letter" || model.Document == "Both")
+            {
+                string scope = ImportValue(row, "RLScopeProductType");
+                if (string.IsNullOrWhiteSpace(scope)) throw new InvalidOperationException("RL Scope / Product Type is required for Reliance Letter.");
+                decimal rlQuantity = ImportDecimal(row, "RLQuantity");
+                decimal rlRate = ImportDecimal(row, "RLRate");
+                model.ProductDetails.Add(new InvoiceCostingDetailModel { ProductType = scope, Quantity = rlQuantity > 0 ? rlQuantity : model.LoanCount, Rate = rlRate > 0 ? rlRate : model.RLCost });
             }
+            return model;
+        }
 
-            BulkInsertToTemp(dt);
+        private static void ResolveImportCosting(SqlConnection con, SqlTransaction transaction, InvoiceModel model)
+        {
+            using (SqlCommand client = new SqlCommand("SELECT TOP 1 ClientID FROM Clients WHERE LTRIM(RTRIM(ClientName))=LTRIM(RTRIM(@Name))", con, transaction))
+            {
+                client.Parameters.Add("@Name", SqlDbType.NVarChar, 200).Value = model.BillingEntity;
+                object id = client.ExecuteScalar();
+                if (id == null || id == DBNull.Value) throw new InvalidOperationException("Billing Entity was not found in client master.");
+                model.ProjectID = Convert.ToInt32(id);
+            }
+            if (model.Document == "Both")
+            {
+                model.Document = "Securitization";
+                ResolveImportCosting(con, transaction, model);
+                model.Document = "Both";
+                if (model.ProductDetails.Count == 1)
+                {
+                    InvoiceCostingDetailModel detail = model.ProductDetails[0];
+                    using (SqlCommand scope = new SqlCommand(@"SELECT TOP 1 d.CostingDetailID,d.Rate FROM SecuritizationRelianceLetterCosting h INNER JOIN SecuritizationRelianceLetterCostingDetail d ON d.RateID=h.RateID AND d.IsActive=1 WHERE h.ProjectId=@ProjectID AND LTRIM(RTRIM(h.Type))='Reliance Letter' AND ISNULL(h.IsActive,1)=1 AND (h.EffectiveFrom IS NULL OR h.EffectiveFrom<=@Date) AND LTRIM(RTRIM(d.ProductType))=LTRIM(RTRIM(@Scope)) ORDER BY ISNULL(h.EffectiveFrom,CONVERT(date,'19000101')) DESC,d.CostingDetailID DESC", con, transaction))
+                    {
+                        scope.Parameters.Add("@ProjectID", SqlDbType.Int).Value = model.ProjectID;
+                        scope.Parameters.Add("@Date", SqlDbType.Date).Value = ParseOptionalInvoiceDate(model.InvoiceDate);
+                        scope.Parameters.Add("@Scope", SqlDbType.NVarChar, 250).Value = detail.ProductType;
+                        using (SqlDataReader reader = scope.ExecuteReader()) if (reader.Read()) { detail.CostingDetailID = Convert.ToInt32(reader["CostingDetailID"]); if (detail.Rate <= 0) detail.Rate = Convert.ToDecimal(reader["Rate"]); }
+                    }
+                }
+                return;
+            }
+            using (SqlCommand cmd = new SqlCommand(@"
+                SELECT TOP 1 RateID,Rate,BillingMethod,MinimumAmount,MaximumCap
+                FROM SecuritizationRelianceLetterCosting
+                WHERE ProjectId=@ProjectID AND LTRIM(RTRIM(Type))=LTRIM(RTRIM(@Document)) AND ISNULL(IsActive,1)=1
+                  AND (EffectiveFrom IS NULL OR EffectiveFrom<=@Date)
+                ORDER BY ISNULL(EffectiveFrom,CONVERT(date,'19000101')) DESC,COALESCE(UpdatedDate,AddedDate) DESC,RateID DESC", con, transaction))
+            {
+                cmd.Parameters.Add("@ProjectID", SqlDbType.Int).Value = model.ProjectID;
+                cmd.Parameters.Add("@Document", SqlDbType.NVarChar, 200).Value = model.Document;
+                cmd.Parameters.Add("@Date", SqlDbType.Date).Value = ParseOptionalInvoiceDate(model.InvoiceDate);
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                    if (reader.Read())
+                    {
+                        model.CostingRateID = Convert.ToInt32(reader["RateID"]);
+                        if (model.Document == "Securitization")
+                        {
+                            if (model.RLCost <= 0) model.RLCost = Convert.ToDecimal(reader["Rate"]);
+                            if (string.IsNullOrWhiteSpace(model.BillingMethod)) model.BillingMethod = Convert.ToString(reader["BillingMethod"]);
+                            if (model.MinimumAmount <= 0 && reader["MinimumAmount"] != DBNull.Value) model.MinimumAmount = Convert.ToDecimal(reader["MinimumAmount"]);
+                            if (model.MaximumCap <= 0 && reader["MaximumCap"] != DBNull.Value) model.MaximumCap = Convert.ToDecimal(reader["MaximumCap"]);
+                        }
+                    }
+            }
+            if (model.Document == "Reliance Letter" && model.CostingRateID > 0 && model.ProductDetails.Count == 1)
+            {
+                InvoiceCostingDetailModel detail = model.ProductDetails[0];
+                using (SqlCommand cmd = new SqlCommand("SELECT TOP 1 CostingDetailID,Rate FROM SecuritizationRelianceLetterCostingDetail WHERE RateID=@RateID AND IsActive=1 AND LTRIM(RTRIM(ProductType))=LTRIM(RTRIM(@Scope)) ORDER BY CostingDetailID DESC", con, transaction))
+                {
+                    cmd.Parameters.Add("@RateID", SqlDbType.Int).Value = model.CostingRateID;
+                    cmd.Parameters.Add("@Scope", SqlDbType.NVarChar, 250).Value = detail.ProductType;
+                    using (SqlDataReader reader = cmd.ExecuteReader()) if (reader.Read()) { detail.CostingDetailID = Convert.ToInt32(reader["CostingDetailID"]); if (detail.Rate <= 0) detail.Rate = Convert.ToDecimal(reader["Rate"]); }
+                }
+            }
+        }
 
-            return ExecuteBulkProcedure();
+        private static bool ImportDuplicateExists(SqlConnection con, SqlTransaction transaction, InvoiceModel model)
+        {
+            using (SqlCommand cmd = new SqlCommand(@"SELECT COUNT(1) FROM RLinvoice WHERE LTRIM(RTRIM(TradeName))=LTRIM(RTRIM(@TradeName)) AND LTRIM(RTRIM(BillingEntity))=LTRIM(RTRIM(@BillingEntity)) AND LTRIM(RTRIM(Document))=LTRIM(RTRIM(@Document)) AND TRY_CONVERT(date,InvoiceDate)=@InvoiceDate", con, transaction))
+            {
+                cmd.Parameters.Add("@TradeName", SqlDbType.NVarChar, 250).Value = model.TradeName;
+                cmd.Parameters.Add("@BillingEntity", SqlDbType.NVarChar, 250).Value = model.BillingEntity;
+                cmd.Parameters.Add("@Document", SqlDbType.NVarChar, 100).Value = model.Document;
+                cmd.Parameters.Add("@InvoiceDate", SqlDbType.Date).Value = ParseOptionalInvoiceDate(model.InvoiceDate);
+                return Convert.ToInt32(cmd.ExecuteScalar()) > 0;
+            }
+        }
+
+        private static string NormalizeImportHeader(string value) { return new string((value ?? "").Where(char.IsLetterOrDigit).ToArray()); }
+        private static string ImportValue(DataRow row, string column) { return row.Table.Columns.Contains(column) ? Convert.ToString(row[column]).Trim() : ""; }
+        private static decimal ImportDecimal(DataRow row, string column) { decimal value; return decimal.TryParse(ImportValue(row, column).Replace("$", "").Replace(",", ""), NumberStyles.Any, CultureInfo.InvariantCulture, out value) ? value : 0; }
+        private static int ImportInt(DataRow row, string column) { decimal value = ImportDecimal(row, column); if (value < 0 || value != decimal.Truncate(value)) throw new InvalidOperationException(column + " must be a whole number."); return Convert.ToInt32(value); }
+        private static string NormalizeBillingMethod(string value) { string clean = (value ?? "").Replace(" ", ""); return clean.Equals("PerFile", StringComparison.OrdinalIgnoreCase) ? "PerFile" : clean.Equals("Hourly", StringComparison.OrdinalIgnoreCase) ? "Hourly" : ""; }
+        private static string ImportDate(DataRow row, string column, bool required)
+        {
+            string value = ImportValue(row, column); DateTime date;
+            if (string.IsNullOrWhiteSpace(value)) { if (required) throw new InvalidOperationException(column + " is required."); return ""; }
+            if (!DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out date) && !DateTime.TryParse(value, CultureInfo.CurrentCulture, DateTimeStyles.None, out date)) throw new InvalidOperationException(column + " is not a valid date.");
+            return date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         }
         public static void BulkInsertToTemp(DataTable dt)
         {
@@ -1086,6 +1259,11 @@ namespace Vendor_Portal.BDM
         private static void ApplyCostingRules(SqlConnection con, SqlTransaction transaction, InvoiceModel model)
         {
             if (model == null) throw new InvalidOperationException("Invoice details are required.");
+            if (string.Equals(model.Document, "Both", StringComparison.OrdinalIgnoreCase))
+            {
+                ApplyCombinedCostingRules(con, transaction, model);
+                return;
+            }
             if (model.ProjectID <= 0)
             {
                 using (SqlCommand clientCommand = new SqlCommand("SELECT TOP 1 ClientID FROM Clients WHERE LTRIM(RTRIM(ClientName))=LTRIM(RTRIM(@ClientName))", con, transaction))
@@ -1251,6 +1429,41 @@ namespace Vendor_Portal.BDM
                 model.ExpectedBilling = total;
                 model.MinimumAmount = 0; model.MaximumCap = 0; model.MinimumApplied = false; model.CapApplied = false;
             }
+        }
+
+        private static void ApplyCombinedCostingRules(SqlConnection con, SqlTransaction transaction, InvoiceModel model)
+        {
+            InvoiceModel securitization = new InvoiceModel
+            {
+                Document = "Securitization", InvoiceDate = model.InvoiceDate, BillingEntity = model.BillingEntity,
+                ProjectID = model.ProjectID, CostingRateID = model.CostingRateID, BillingMethod = model.BillingMethod,
+                LoanCount = model.LoanCount, HoursWorked = model.HoursWorked, RLCost = model.RLCost,
+                MinimumAmount = model.MinimumAmount, MaximumCap = model.MaximumCap,
+                UpdateMasterRates = model.UpdateMasterRates, ProductDetails = new List<InvoiceCostingDetailModel>()
+            };
+            ApplyCostingRules(con, transaction, securitization);
+
+            InvoiceModel relianceLetter = new InvoiceModel
+            {
+                Document = "Reliance Letter", InvoiceDate = model.InvoiceDate, BillingEntity = model.BillingEntity,
+                ProjectID = securitization.ProjectID, ProductDetails = model.ProductDetails,
+                UpdateMasterRates = model.UpdateMasterRates
+            };
+            ApplyCostingRules(con, transaction, relianceLetter);
+
+            model.ProjectID = securitization.ProjectID;
+            model.CostingRateID = securitization.CostingRateID;
+            model.BillingMethod = securitization.BillingMethod;
+            model.LoanCount = securitization.LoanCount;
+            model.HoursWorked = securitization.HoursWorked;
+            model.RLCost = securitization.RLCost;
+            model.MinimumAmount = securitization.MinimumAmount;
+            model.MaximumCap = securitization.MaximumCap;
+            model.MinimumApplied = securitization.MinimumApplied;
+            model.CapApplied = securitization.CapApplied;
+            model.BaseAmount = securitization.BaseAmount + relianceLetter.BaseAmount;
+            model.ExpectedBilling = securitization.ExpectedBilling + relianceLetter.ExpectedBilling;
+            model.ProductDetails = relianceLetter.ProductDetails;
         }
 
         private static void UpdateHeaderRate(SqlConnection con, SqlTransaction transaction, int rateId, decimal rate, string method, decimal minimum, decimal cap)

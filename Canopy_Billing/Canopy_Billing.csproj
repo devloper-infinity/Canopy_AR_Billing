@@ -183,8 +183,8 @@
       <Private>True</Private>
       <Private>True</Private>
     </Reference>
-    <Reference Include="System.IO.Packaging, Version=10.0.0.11, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.IO.Packaging.10.0.11\lib\net462\System.IO.Packaging.dll</HintPath>
+    <Reference Include="System.IO.Packaging, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.IO.Packaging.6.0.0\lib\net461\System.IO.Packaging.dll</HintPath>
     </Reference>
     <Reference Include="System.Memory, Version=4.0.1.2, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Memory.4.5.5\lib\net461\System.Memory.dll</HintPath>
@@ -2917,6 +2917,9 @@
     <Compile Include="BDM\RLInvoiceExcel.ashx.cs">
       <DependentUpon>RLInvoiceExcel.ashx</DependentUpon>
     </Compile>
+    <Compile Include="BDM\RLInvoiceImportTemplate.ashx.cs">
+      <DependentUpon>RLInvoiceImportTemplate.ashx</DependentUpon>
+    </Compile>
     <Compile Include="BDM\ImportBilling.aspx.cs">
       <DependentUpon>ImportBilling.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -3400,6 +3403,7 @@
     <Content Include="Reports\PCQCSummary_Preview.rpt" />
     <Content Include="BDM\RLInvoicePdf.ashx" />
     <Content Include="BDM\RLInvoiceExcel.ashx" />
+    <Content Include="BDM\RLInvoiceImportTemplate.ashx" />
     <Content Include="Database\RLInvoiceSentToClient.sql" />
     <Content Include="Database\RLInvoiceEnhancements.sql" />
     <None Include="Web.Debug.config">

@@ -157,7 +157,10 @@
                                         <th>Billing Entity</th>
                                         <th>Trade Name</th>
                                         <th>Invoice Date</th>
-                                        <th>Loan Count</th>
+                                        <th>RL Count</th>
+                                        <th>RL Rate</th>
+                                        <th>Sec Files/Hours</th>
+                                        <th>Sec Rate</th>
                                         <th>Expected Billing</th>
                                         <th>Our Client</th>
                                         <th>Recipient</th>
