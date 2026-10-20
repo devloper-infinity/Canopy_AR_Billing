@@ -5,6 +5,56 @@ var bpd_deal_html = '';
 var ProjectApprovalID;
 var newProjectID;
 
+function initializeCostingSecurity() {
+    $.ajax({ url: "ProjectDetailsMaster.aspx/GetCostingAccessState", type: "POST", data: "{}", dataType: "json", contentType: "application/json; charset=utf-8" })
+        .done(function (r) {
+            if (r.d.Status === "unlocked") { bdmprojectmaster_bindgrid(); return; }
+            if (r.d.Status !== 'otp_required') {
+                $('#costingAccessDenied span').text(r.d.Message);
+                $('#costingAccessDenied').show();
+                $('.project-master-modern').hide();
+                return;
+            }
+            $('#costingOtpMessage').text(r.d.Message);
+            $('#costingOtpCode,#costingOtpVerify,#costingOtpSend').prop('disabled', r.d.Status !== 'otp_required');
+            $('#costingOtpModal').modal('show');
+            if (r.d.Status === 'otp_required') sendCostingEmailOtp();
+        }).fail(function () { $('#costingOtpMessage').text('Unable to check costing access.'); $('#costingOtpModal').modal('show'); });
+}
+
+function startCostingOtpResend(seconds) {
+    var button = $('#costingOtpSend'), remaining = seconds || 30;
+    button.prop('disabled', true).text('Resend in ' + remaining + 's');
+    clearInterval(window.costingOtpResendTimer);
+    window.costingOtpResendTimer = setInterval(function () {
+        remaining--;
+        if (remaining <= 0) { clearInterval(window.costingOtpResendTimer); button.prop('disabled', false).text('Resend code'); }
+        else button.text('Resend in ' + remaining + 's');
+    }, 1000);
+}
+
+function sendCostingEmailOtp() {
+    $('#costingOtpError').text(''); $('#costingOtpSend').prop('disabled', true).text('Sending...');
+    $.ajax({ url: "ProjectDetailsMaster.aspx/SendCostingEmailOtp", type: "POST", data: "{}", dataType: "json", contentType: "application/json; charset=utf-8" })
+        .done(function (r) {
+            $('#costingOtpMessage').text(r.d.Message);
+            if (r.d.Status === 'otp_sent') { $('#costingOtpCode,#costingOtpVerify').prop('disabled', false); startCostingOtpResend(r.d.RetryAfterSeconds); $('#costingOtpCode').focus(); }
+            else if (r.d.Status === 'rate_limited') startCostingOtpResend(r.d.RetryAfterSeconds);
+            else $('#costingOtpSend').prop('disabled', true);
+        }).fail(function () { $('#costingOtpError').text('Unable to send the verification code.'); $('#costingOtpSend').prop('disabled', false).text('Send code'); });
+}
+
+$(document).on('click', '#costingOtpSend', sendCostingEmailOtp);
+
+$(document).on('click', '#costingOtpVerify', function () {
+    var code = $('#costingOtpCode').val();
+    if (!/^\d{6}$/.test(code)) { $('#costingOtpError').text('Enter a 6-digit code.'); return; }
+    $('#costingOtpVerify').prop('disabled', true);
+    $.ajax({ url: "ProjectDetailsMaster.aspx/VerifyCostingOtp", type: "POST", data: JSON.stringify({ code: code }), dataType: "json", contentType: "application/json; charset=utf-8" })
+        .done(function (r) { if (r.d.Status === 'unlocked') { $('#costingOtpModal').modal('hide'); bdmprojectmaster_bindgrid(); } else { $('#costingOtpError').text(r.d.Message); $('#costingOtpVerify').prop('disabled', r.d.Status !== 'otp_required'); } })
+        .fail(function () { $('#costingOtpError').text('Verification failed.'); $('#costingOtpVerify').prop('disabled', false); });
+});
+
 function blankForNull(s) {
     return s == "null" || s == null ? "" : s;
 }

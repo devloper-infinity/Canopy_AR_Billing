@@ -15,12 +15,32 @@ namespace Vendor_Portal.BDM
     {
         protected void Page_Load(object sender, EventArgs e)
         {
-
+            Response.Cache.SetCacheability(HttpCacheability.NoCache);
+            Response.Cache.SetNoStore();
         }
 
-        [WebMethod]
+        [WebMethod(EnableSession = true)]
+        public static CostingSecurityService.AccessState GetCostingAccessState()
+        {
+            return CostingSecurityService.GetState();
+        }
+
+        [WebMethod(EnableSession = true)]
+        public static CostingSecurityService.AccessState SendCostingEmailOtp()
+        {
+            return CostingSecurityService.SendOtp();
+        }
+
+        [WebMethod(EnableSession = true)]
+        public static CostingSecurityService.AccessState VerifyCostingOtp(string code)
+        {
+            return CostingSecurityService.Verify(code);
+        }
+
+        [WebMethod(EnableSession = true)]
         public static string GteAllConfiguredProjects()
         {
+            if (!CostingSecurityService.HasActiveAccess()) throw new HttpException(403, "Costing OTP verification is required.");
             DataTable dt1 = new bllTracking().ViewAllProjectApp();
             List<Dictionary<string, object>> rows = new List<Dictionary<string, object>>();
             Dictionary<string, object> row;

@@ -17,6 +17,18 @@
      }
 
      body { background: var(--erp-bg); }
+     .costing-access-denied {
+         display: none;
+         margin: 18px;
+         padding: 18px 22px;
+         border: 2px solid #dc2626;
+         border-radius: 10px;
+         background: #fef2f2;
+         color: #b91c1c;
+         font-size: 16px;
+         font-weight: 700;
+         text-align: center;
+     }
 
      .loading {
          display: none;
@@ -239,9 +251,7 @@
  </style>
  <script>
 
-     $(document).ready(function () {
-         bdmprojectmaster_bindgrid();
-     });
+     $(document).ready(function () { initializeCostingSecurity(); });
 
      function bpm_addnewproject() {
          location.href = "ProjectDetails.aspx";
@@ -271,7 +281,17 @@
         <div class="loading__text">One moment, please...</div>
     </div>
 </div>
+  <div id="costingAccessDenied" class="costing-access-denied" role="alert"><i class="fas fa-ban"></i>&nbsp; <span></span></div>
   <div class="erp-page-shell project-master-modern">
+      <div class="modal fade" id="costingOtpModal" data-backdrop="static" data-keyboard="false" tabindex="-1" role="dialog">
+          <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+              <div class="modal-header"><h5 class="modal-title">Costing security verification</h5></div>
+              <div class="modal-body"><p id="costingOtpMessage">Request a code sent to your registered company email.</p>
+                  <input id="costingOtpCode" class="form-control" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+                  <div id="costingOtpError" class="text-danger mt-2"></div></div>
+              <div class="modal-footer"><button type="button" id="costingOtpSend" class="btn btn-secondary">Send code</button><button type="button" id="costingOtpVerify" class="btn btn-primary">Verify</button></div>
+          </div></div>
+      </div>
       <div class="erp-hero" style="display:none;">
           <div>
               <h3><i class="fas fa-folder-open"></i>&nbsp; Project Details Master</h3>
