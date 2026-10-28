@@ -46,6 +46,7 @@ IF COL_LENGTH('dbo.RLinvoice', 'MaximumCap') IS NULL ALTER TABLE dbo.RLinvoice A
 IF COL_LENGTH('dbo.RLinvoice', 'BaseAmount') IS NULL ALTER TABLE dbo.RLinvoice ADD BaseAmount decimal(18,2) NULL;
 IF COL_LENGTH('dbo.RLinvoice', 'MinimumApplied') IS NULL ALTER TABLE dbo.RLinvoice ADD MinimumApplied bit NULL;
 IF COL_LENGTH('dbo.RLinvoice', 'CapApplied') IS NULL ALTER TABLE dbo.RLinvoice ADD CapApplied bit NULL;
+IF COL_LENGTH('dbo.RLinvoice', 'AddedDate') IS NULL ALTER TABLE dbo.RLinvoice ADD AddedDate datetime NOT NULL CONSTRAINT DF_RLinvoice_AddedDate DEFAULT (GETDATE());
 
 IF OBJECT_ID('dbo.RLInvoiceCostingDetail', 'U') IS NULL
 BEGIN
