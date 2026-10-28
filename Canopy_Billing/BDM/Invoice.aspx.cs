@@ -271,12 +271,12 @@ namespace Vendor_Portal.BDM
                                 INSERT RLinvoice
                                 (OurClient,Recipient,TradeName,InvoiceDate,Document,TM,DocuSign,DocumentDate,ExecutedDate,
                                  BillingEntity,ContactPerson,LoanCount,Cost,ExpectedBilling,Notes,CostingRateID,BillingMethod,
-                                 HoursWorked,MinimumAmount,MaximumCap,BaseAmount,MinimumApplied,CapApplied,AddedBy)
+                                 HoursWorked,MinimumAmount,MaximumCap,BaseAmount,MinimumApplied,CapApplied,AddedBy,AddedDate)
                                 OUTPUT INSERTED.InvoiceID
                                 VALUES
                                 (@OurClient,@Recipient,@TradeName,@InvoiceDate,@Document,@TM,@DocuSign,@DocumentDate,@ExecutedDate,
                                  @BillingEntity,@ContactPerson,@LoanCount,@Cost,@ExpectedBilling,@Notes,@CostingRateID,@BillingMethod,
-                                 @HoursWorked,@MinimumAmount,@MaximumCap,@BaseAmount,@MinimumApplied,@CapApplied,@AddedBy)", con, transaction))
+                                 @HoursWorked,@MinimumAmount,@MaximumCap,@BaseAmount,@MinimumApplied,@CapApplied,@AddedBy,GETDATE())", con, transaction))
                             {
                                 AddInvoiceParameters(cmd, model);
                                 int invoiceId = Convert.ToInt32(cmd.ExecuteScalar());
@@ -974,7 +974,7 @@ namespace Vendor_Portal.BDM
                 Document, TM, DocuSign, DocumentDate, ExecutedDate,
                 BillingEntity, ContactPerson,
                 LoanCount, Cost, ExpectedBilling, Notes, CostingRateID, BillingMethod,
-                HoursWorked, MinimumAmount, MaximumCap, BaseAmount, MinimumApplied, CapApplied, AddedBy
+                HoursWorked, MinimumAmount, MaximumCap, BaseAmount, MinimumApplied, CapApplied, AddedBy, AddedDate
             )
             OUTPUT INSERTED.InvoiceID
             VALUES
@@ -983,7 +983,7 @@ namespace Vendor_Portal.BDM
                 @Document, @TM, @DocuSign, @DocumentDate, @ExecutedDate,
                 @BillingEntity, @ContactPerson,
                 @LoanCount, @Cost, @ExpectedBilling, @Notes, @CostingRateID, @BillingMethod,
-                @HoursWorked, @MinimumAmount, @MaximumCap, @BaseAmount, @MinimumApplied, @CapApplied, @AddedBy
+                @HoursWorked, @MinimumAmount, @MaximumCap, @BaseAmount, @MinimumApplied, @CapApplied, @AddedBy, GETDATE()
             )", con, transaction);
 
                         AddInvoiceParameters(cmd, model);

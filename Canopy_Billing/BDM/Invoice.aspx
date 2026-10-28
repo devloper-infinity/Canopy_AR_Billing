@@ -640,17 +640,23 @@
             padding: 5px 0;
         }
 
+        #rladdinvoice_billingTable_wrapper .dataTables_scrollBody {
+            height: 400px !important;
+            max-height: 400px !important;
+        }
+
         .invoice-action-menu .dropdown-item {
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 7px 13px;
+            padding: 0!important;
             border: 0;
             background: transparent;
             color: var(--erp-text);
-            font-size: 13px;
+            font-size: 12px!important;
             text-align: left;
             width: 100%;
+            min-height:30px!important;
         }
 
             .invoice-action-menu .dropdown-item:hover, .invoice-action-menu .dropdown-item:focus {

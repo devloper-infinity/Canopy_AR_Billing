@@ -5,16 +5,29 @@
         .loading {
             display: none;
             position: fixed;
-            top: 350px;
+            top: 50%;
             left: 50%;
-            margin-top: -96px;
-            margin-left: -96px;
+            margin: 0;
+            transform: translate(-50%, -50%);
             /*  background-color: #ccc;*/
             opacity: .85;
             border-radius: 25px;
-            width: 192px;
-            height: 192px;
+            width: min(560px, 90vw);
+            height: auto;
             z-index: 99999;
+        }
+
+        .loading .loading__box {
+            width: 100%;
+            min-height: 220px;
+            padding: 24px 32px;
+            box-sizing: border-box;
+        }
+
+        .loading .loading__text {
+            max-width: 480px;
+            margin: 12px auto 0;
+            line-height: 1.5;
         }
 
         .dataTables_length, .dataTables_info {
@@ -63,13 +76,16 @@
             cbr_bindyear();
         });
     </script>
+    <style>
+        #cbr_syncModal .modal-dialog { max-width: 720px; }
+    </style>
 </asp:Content>
 <asp:Content ID="Content2" ContentPlaceHolderID="ContentPlaceHolder1" runat="server">
     <div class="bdm-page">
         <div class="loading" id="load1">
             <div class="loading__box">
                 <img src="../images/Load_1.gif" alt="Loading" />
-                <div class="loading__text">One moment, please...</div>
+                <div class="loading__text" id="cbr_loadingText">One moment, please...</div>
             </div>
         </div>
 
@@ -131,6 +147,19 @@
                 </div>
             </div>
 
+        </div>
+
+        <div class="modal fade" id="cbr_syncModal" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content">
+                    <div class="modal-header"><h5 class="modal-title">LauraMac ODS data</h5></div>
+                    <div class="modal-body" id="cbr_syncMessage"></div>
+                    <div class="modal-footer">
+                        <button type="button" id="cbr_btnSync" class="btn btn-primary" onclick="return cbr_syncAndShow();">Sync with LauraMac ODS and Generate Report</button>
+                        <button type="button" id="cbr_btnNoSync" class="btn btn-secondary" onclick="return cbr_showWithoutSync();">Show without Sync</button>
+                    </div>
+                </div>
+            </div>
         </div>
 </asp:Content>
 
