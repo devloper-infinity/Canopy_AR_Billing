@@ -5,21 +5,23 @@
         .loading {
             display: none;
             position: fixed;
-            top: 50%;
-            left: 50%;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
             margin: 0;
-            transform: translate(-50%, -50%);
-            /*  background-color: #ccc;*/
-            opacity: .85;
-            border-radius: 25px;
-            width: min(560px, 90vw);
-            height: auto;
+            transform: none;
+            opacity: 1;
+            border-radius: 0;
+            width: 100%;
+            height: 100%;
             z-index: 99999;
         }
 
         .loading .loading__box {
-            width: 100%;
-            min-height: 220px;
+            width: 560px;
+            max-width: calc(100% - 32px);
+            min-height: 0;
             padding: 24px 32px;
             box-sizing: border-box;
         }
