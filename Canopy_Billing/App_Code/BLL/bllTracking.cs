@@ -742,5 +742,31 @@ namespace Vendor_Portal.App_Code.BLL
         {
             return dalTracking.InsertRates(htParam);
         }
+
+        //***********************************Arti Changes (YTU) **************************************//
+        public DataTable GetBillingDecriptionSummary()
+        {
+            return dalTracking.GetBillingDecriptionSummary();
+        }
+
+        public DataTable GetBillingDecriptionDetails()
+        {
+            return dalTracking.GetBillingDecriptionDetails();
+        }
+
+        public DataTable GetBillingProjectWise(int ProjectID)
+        {
+            return dalTracking.GetBillingProjectWise(ProjectID);
+        }
+
+        public int UpdateBillingStatus(Hashtable ht)
+        {
+            return dalTracking.UpdateBillingStatus(ht);
+        }
+
+        public DataTable GetBillingProjectIsNull()
+        {
+            return dalTracking.GetBillingProjectIsNull();
+        }
     }
 }

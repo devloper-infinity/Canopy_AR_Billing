@@ -1904,5 +1904,44 @@ namespace Vendor_Portal.App_Code.DAL
             int ReturnValue = Convert.ToInt32(cmd.Parameters["@ReturnValue"].Value);
             return ReturnValue;
         }
+
+        //***********************************Arti Changes (YTU) **************************************//
+        public DataTable GetBillingDecriptionSummary()
+        {
+            SqlCommand cmd = SQLHelper.GetCommand(System.Data.CommandType.StoredProcedure, "usp_GetBillingDecriptionSummary_YTU");
+            DataTable dt = SQLHelper.ExecuteDataTableCmd_billing(cmd);
+            return dt;
+        }
+
+        public DataTable GetBillingDecriptionDetails()
+        {
+            SqlCommand cmd = SQLHelper.GetCommand(System.Data.CommandType.StoredProcedure, "usp_GetBillingDecriptionDetails_YTU");
+            DataTable dt = SQLHelper.ExecuteDataTableCmd_billing(cmd);
+            return dt;
+        }
+
+        public DataTable GetBillingProjectWise(int ProjectID)
+        {
+            SqlCommand cmd = SQLHelper.GetCommand(System.Data.CommandType.StoredProcedure, "usp_GetBillingProjectWise_YTU");
+            SQLHelper.AddParamToSQLCmd(cmd, "@ProjectID", System.Data.SqlDbType.Int, 100, System.Data.ParameterDirection.Input, ProjectID);
+            DataTable dt = SQLHelper.ExecuteDataTableCmd_billing(cmd);
+            return dt;
+        }
+
+        public int UpdateBillingStatus(Hashtable htParam)
+        {
+            SqlCommand cmd = SQLHelper.GetCommand(System.Data.CommandType.StoredProcedure, "usp_UpdateProjectWiseLoanIsBilling_YTU");
+            SQLHelper.AddParamToSQLCmd(cmd, "@LoanID", System.Data.SqlDbType.BigInt, 0, System.Data.ParameterDirection.Input, htParam["LoanId"]);
+            SQLHelper.ExecuteNonQueryCmdBilling(cmd);
+            int ReturnValue = Convert.ToInt32(cmd.Parameters["@ReturnValue"].Value);
+            return ReturnValue;
+        }
+
+        public DataTable GetBillingProjectIsNull()
+        {
+            SqlCommand cmd = SQLHelper.GetCommand(System.Data.CommandType.StoredProcedure, "usp_GetBillingProjectIsNull_YTU");
+            DataTable dt = SQLHelper.ExecuteDataTableCmd_billing(cmd);
+            return dt;
+        }
     }
 }
