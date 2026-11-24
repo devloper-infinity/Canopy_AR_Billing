@@ -81,7 +81,7 @@
                                     <li class="dropdown-divider"></li>
                                 </ul>
                             </li>
-                            <li class="nav-item dropdown">
+                            <li class="nav-item dropdown" id="billings" runat="server">
                                 <a id="pmutilities" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" class="nav-link dropdown-toggle">Billing</a>
                                 <ul aria-labelledby="pmutilities" class="dropdown-menu border-0 shadow">
                                     <li><a href="Yettobebilled.aspx" class="dropdown-item">Invoices to be submitted</a></li>

@@ -17,7 +17,8 @@ namespace Vendor_Portal.BDM
                 int.Parse(HttpContext.Current.User.Identity.Name.ToString()) == 9976 || int.Parse(HttpContext.Current.User.Identity.Name.ToString()) == 8967
                  || int.Parse(HttpContext.Current.User.Identity.Name.ToString()) == 10332
                   || int.Parse(HttpContext.Current.User.Identity.Name.ToString()) == 10333
-                   || int.Parse(HttpContext.Current.User.Identity.Name.ToString()) == 10334)
+                   || int.Parse(HttpContext.Current.User.Identity.Name.ToString()) == 10334
+                   || int.Parse(HttpContext.Current.User.Identity.Name.ToString()) == 10575)
             {
                 costingMaster.Style.Add("display", "none");
                 clientmaster.Style.Add("display", "");
@@ -25,6 +26,7 @@ namespace Vendor_Portal.BDM
                 mergebilling.Style.Add("display", "none");
                 // billingheader.Style.Add("display", "none");
                 reports.Style.Add("display", "none");
+                billings.Style.Add("display", "none");
                 Li1.Style.Add("display", "none");
                 Li2.Style.Add("display", "none");
             }
@@ -50,6 +52,7 @@ namespace Vendor_Portal.BDM
                 cosperrecord.Style.Add("display", "none");
                 //billingheader.Style.Add("display", "none");
                 mergebilling.Style.Add("display", "none");
+                billings.Style.Add("display", "none");
             }
 
         }
